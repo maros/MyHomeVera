@@ -51,7 +51,7 @@ local SENSOR_ACTION_ARM 		= "SetArmed"
 function initialize(lul_device)
 	Device = lul_device
 	
-	log('Initialize MyHome');
+	luup.log("[MyHome] Initialize MyHome");
 	
 	local data = {}
   	data = readSettings(lul_device)
@@ -97,18 +97,17 @@ function set_status_vacation()
 end
 
 function init_away()
-	log("Set status to home",100)
 	-- TODO: Turn off all lights
 	start_timer(TIMER_AWAY,'run_away')
 end
 
 function run_intrusion()
-	log("Intrusion was detected",100)
+	luup.log("[MyHome] Intrusion was detected");
 	start_timer(TIMER_INTRUSION,'run_alarm')
 end
 
 function run_alarm()
-	log("Run alarm logic",100)
+	luup.log("[MyHome] ALARM!!!")
 	-- TODO: Send messages
 	-- TODO: Turn on lights
 	-- TODO: Run sirens
@@ -117,7 +116,7 @@ function run_alarm()
 end
 
 function run_away()
-	log("Run away logic",100)
+	luup.log("[MyHome] Perform away")
   	for i in pairs(SENSOR_ALL) do
     	local id = SENSOR_ALL[i];
 		luup.call_action(SID_SecuritySensor1, SENSOR_ACTION_ARM, {newArmedValue = 1}, tonumber(id))
@@ -129,7 +128,7 @@ end
 function set_status(new_status)
 	local current_status = luup.variable_get(SERVICE_ID, "Status", Device)
   	if (tonumber(new_status) ~= tonumber(current_status)) then
-  		log('Set status to ' .. new_status, 100);
+  		luup.log("[MyHome] Set status to " .. new_status)
    		luup.variable_set(SERVICE_ID, "Status", new_status, Device)
    		return true
    	end
@@ -137,14 +136,13 @@ function set_status(new_status)
 end
 
 function watch_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-    local str_debug = "Watched variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new
-	log(Device, str_debug , 100)
+	luup.log("[MyHome] Watched variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
 	
 	local data = {}
     data = read_config(Device)
 	
 	if (tonumber(data.status) >= 0 and tonumber(data.status) < STATUS.INTRUSION) then
-	  	log(Device, "data.status=" .. data.status , 100)
+	  	luup.log("[MyHome] Callback data.status=" .. data.status , 100)
 	 	check_tripped()
 	end
 end
@@ -185,15 +183,6 @@ end
 -- 
 -- HELPER
 --
-
-function log( lul_device, message, loglevel)
-	local debug = 0 
-	debug = luup.variable_get( SERVICE_ID, "Debug", Device)
-	if ( tonumber(loglevel) >=  tonumber(debug)) then
-		luup.log("MyHome(" .. tostring(loglevel) .. ")" .. "::" .. (message or "nil"))
-    end 
-end
-
 
 function read_config(lul_device)
 	local data = {}
@@ -300,12 +289,12 @@ end
 --
 
 _G["blind_stop"] = function(device) 
-    log("Stoping blind " .. device)
+    luup.log("[MyHome] Stoping blind " .. device)
     luup.call_action(SID_BLINDS, "Stop", {}, tonumber(device))
 end
 
 _G["light_turn_off"] = function(device)
-	log("Turn light off " .. device)
+	log("[MyHome] Turn light off " .. device)
 	luup.call_action(SID_POWER, "SetTarget", { newTargetValue = 0 }, tonumber(device))
 end
 
@@ -313,7 +302,7 @@ _G["blind_partial"] = function (device,percentage)
 	device = tonumber(device)
 	percentage = tonumber(percentage)
 
-    luup.log("Moving blind " .. device .. " to " .. percentage .. "%")
+    luup.log("[MyHome] Moving blind " .. device .. " to " .. percentage .. "%")
     
     local blind_position = luup.variable_get(SID_DIMMING,"LoadLevelStatus",device);
     local blind_time = math.floor(( blind_position - percentage ) / 100 * TIMER_BLINDS);
