@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<scpd xmlns="urn:schemas-upnp-org:service-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <serviceStateTable>
+    <stateVariable sendEvents="yes">
+      <name>Status</name>
+      <dataType>ui1</dataType>
+      <defaultValue>0</defaultValue>
+      <shortCode>status</shortCode>
+	  <allowedValueRange>
+        <minimum>0</minimum>
+        <maximum>100</maximum>
+      </allowedValueRange>
+    </stateVariable>
+  </serviceStateTable>
+  <actionList>
+    <action>
+      <name>Home</name>
+      <argumentList>
+      </argumentList>
+    </action>
+	<action>
+      <name>Away</name>
+      <argumentList>
+      </argumentList>
+    </action>
+	<action>
+      <name>Vacation</name>
+      <argumentList>
+      </argumentList>
+    </action>
+  </actionList>
+</scpd>
+

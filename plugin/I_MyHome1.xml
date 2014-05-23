@@ -1,0 +1,21 @@
+<implementation>
+  <files>L_MyHome1.lua</files>
+  <startup>initialize</startup>
+  <actionList>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>Away</name>
+      <run>return set_status_away(lul_device, lul_settings)</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>Home</name>
+      <run>return set_status_home(lul_device, lul_settings)</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>Vacation</name>
+      <run>return set_status_vacation(lul_device, lul_settings)</run>
+    </action>
+  </actionList>
+</implementation>

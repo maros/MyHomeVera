@@ -1,0 +1,293 @@
+{
+    "flashicon": "http://empuk.host-ed.me/vera_img/lock.png",
+    "doc_url": {
+        "doc_language": 1,
+        "doc_manual": 1,
+        "doc_version": 1,
+        "doc_platform": 0,
+        "doc_page": "devices" 
+    },
+	"DisplayStatus": {
+        "Service": "urn:upnp-k1-com:serviceId:MyHome1",
+        "Variable": "Status",
+        "MinValue": "0",
+        "MaxValue": "100" 
+   },
+    "state_icons": [
+		"lock_0.png",
+		"lock_10.png",
+		"lock_20.png",
+		"lock_90.png",
+		"lock_100.png"
+	],
+    "inScene": "1",
+    "x": 2,
+    "y": 4,
+    "Tabs": [
+        {
+            "Label": {
+                "lang_tag": "tabname_control",
+                "text": "Control"
+            },
+            "Position": "0",
+            "TabType": "flash",
+            "ControlGroup":[
+			{
+			  "id":"1",
+			  "isSingle":"1",
+			  "scenegroup":"1"
+			},
+			{
+			  "id":"2",
+			  "isSingle":"1",
+			  "scenegroup":"1"
+			},
+			{
+			  "id":"3",
+			  "isSingle":"1",
+			  "scenegroup":"2"
+			}
+		    ],
+		  "SceneGroup":[
+			{
+			  "id":"1",
+			  "top": "2",
+			  "left": "0",
+			  "x":"2",
+			  "y":"1"
+			},
+			{
+			  "id":"2",
+			  "top": "0.5",
+			  "left": "-1",
+              "x":"3",
+              "y":"1"
+			}
+		  ],
+		  "Control": [
+                {
+                    "ControlGroup": "0",
+					"ControlType": "label",
+					"text_align": "left",
+                    "Label": {
+                        "lang_tag": "device_settings_page",
+                        "text": "MyHome Settings"
+                    },
+                    "Display": {
+                        "Top": 10,
+                        "Left": 50,
+                        "Width": 75,
+                        "Height": 20
+                    }
+                },
+				{
+                    "ControlGroup": "1",
+                    "ControlType": "button",
+                    "top": 0,
+                    "left": 0,
+                    "Label": {
+                        "lang_tag": "cmd_set",
+                        "text": "Away"
+                    },
+                    "Display": {
+						"Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Variable": "Status",
+                        "Value": "10",
+                        "Top": 40,
+                        "Left": 50,
+                        "Width": 80,
+                        "Height": 20
+                    },
+                    "Command": {
+                        "Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Action": "set_status_away",
+                        "Parameters": []
+                    }
+                },
+				{
+                    "ControlGroup": "1",
+                    "ControlType": "button",
+                    "top": 0,
+                    "left": 1,
+                    "Label": {
+                        "lang_tag": "cmd_set",
+                        "text": "Vacation"
+                    },
+                    "Display": {
+						"Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Variable": "Status",
+                        "Value": "20",
+                        "Top": 40,
+                        "Left": 140,
+                        "Width": 80,
+                        "Height": 20
+                    },
+                    "Command": {
+                        "Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Action": "set_status_vacation",
+                        "Parameters": []
+                    }
+                },
+                {
+                    "ControlGroup": "1",
+                    "ControlType": "button",
+                    "top": 1,
+                    "left": 0.5,
+                    "Label": {
+                        "lang_tag": "cmd_set",
+                        "text": "Home"
+                    },
+                    "Display": {
+						"Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Variable": "Status",
+                        "Value": "0",
+                        "Top": 65,
+                        "Left": 90,
+                        "Width": 80,
+                        "Height": 20
+                    },
+                    "Command": {
+                        "Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Action": "set_status_home",
+                        "Parameters": [
+                        ]
+                    }
+                },
+				{
+					"ControlGroup": "3",
+					"ControlType": "variable",
+                    "top": "0",
+					"left": "0",
+					"text_align": "left",
+                    "Display": {
+						"Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Variable": "StatusLabel",
+						"Top": 90,
+                        "Left": 50,
+                        "Width": 100,
+                        "Height": 20
+                    }
+                },
+				{
+					"ControlGroup": "3",
+					"ControlType": "variable",
+                    "top": "0",
+					"left": "2",
+					"text_align": "right",
+                    "Display": {
+						"Service": "urn:upnp-k1-com:serviceId:MyHome1",
+                        "Variable": "Remaining",
+						"Top": 120,
+                        "Left": 50,
+                        "Width": 75,
+                        "Height": 20
+                    }
+                }
+            ]
+        },
+        {
+            "Label": {
+                "lang_tag": "advanced",
+                "text": "Advanced" 
+            },
+            "Position": "2",
+            "TabType": "javascript",
+            "ScriptName": "shared.js",
+            "Function": "advanced_device" 
+        }
+    ],
+    "sceneList": {
+     "group_1": {
+      "cmd_1": {
+        "label": "ON",
+        "serviceId": "urn:upnp-k1-com:serviceId:MyHome1",
+        "action": "SetTarget",
+        "arguments": {
+          "newTargetValue": "1"
+        },
+        "display": {
+          "service": "urn:upnp-k1-com:serviceId:MyHome1",
+          "variable": "Status",
+          "value": "1"
+        }
+      },
+      "cmd_2": {
+        "label": "OFF",
+        "serviceId": "urn:upnp-k1-com:serviceId:MyHome1",
+        "action": "SetTarget",
+        "arguments": {
+          "newTargetValue": "0"
+        },
+        "display": {
+          "service": "urn:upnp-k1-com:serviceId:MyHome1",
+          "variable": "Status",
+          "value": "0"
+        }
+      }
+     }
+    },
+	"eventList2": [
+    {
+      "id": 1,
+      "label": {
+                "lang_tag": "Status Changed",
+                "text": "Status Changed"
+            },
+      "serviceId": "urn:upnp-k1-com:serviceId:MyHome1",
+      "argumentList": [
+        {
+          "id": 1,
+          "dataType": "number",
+          "defaultValue": "0",
+          "allowedValueList": [
+            {
+                            "Home": "0",
+                            "HumanFriendlyText": {
+                                "lang_tag": "sa_device_Home",
+                                "text": "Someone is at home"
+                            }
+                        },
+                        {
+                            "Away": "10",
+                            "HumanFriendlyText": {
+                                "lang_tag": "sa_device_Away",
+                                "text": "Nobody is at home"
+                            }
+                        },
+                        {
+                            "Vacation": "20",
+                            "HumanFriendlyText": {
+                                "lang_tag": "sa_device_Vacation",
+                                "text": "Gone on vacation"
+                            }
+                        },
+						{
+                            "Intrusion": "90",
+                            "HumanFriendlyText": {
+                                "lang_tag": "sa_device_Intrusion",
+                                "text": "Intrusion has been detected"
+                            }
+                        },
+						{
+                            "Alarm": "100",
+                            "HumanFriendlyText": {
+                                "lang_tag": "sa_device_Alarm",
+                                "text": "Alarm has been triggered"
+                            }
+                        }
+          ],
+          "name": "Status",
+          "comparisson": "=",
+          "prefix": {
+                        "lang_tag": "which_status",
+                        "text": "Which status"
+                    },
+          "suffix": {}
+        }
+      ]
+    }
+  ],
+	"DeviceType": "urn:schemas-k1-com:device:MyHome:1",
+    "device_type": "urn:schemas-k1-com:device:MyHome:1"
+}
+
