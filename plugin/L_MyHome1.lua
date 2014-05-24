@@ -17,7 +17,6 @@
 --
 
 local Device 					= nil
-
 local SERVICE_ID 				= "urn:upnp-k1-com:serviceId:MyHome"
 
 local STATUS					= {}
@@ -53,8 +52,8 @@ function initialize(lul_device)
 	
 	luup.log("[MyHome] Initialize MyHome");
 	
-	local data = {}
-  	data = readSettings(lul_device)
+	--local data = {}
+  	--data = read_config(Device)
   	
   	for i in pairs(SENSOR_ALL) do
     	local id = SENSOR_ALL[i];
