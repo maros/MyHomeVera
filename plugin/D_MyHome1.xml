@@ -7,10 +7,10 @@
   <device>
     <deviceType>urn:schemas-k1-com:device:MyHome:1</deviceType>
     <staticJson>D_MyHome1.json</staticJson> 
-    <friendlyName>Simple Alarm</friendlyName>
+    <friendlyName>MyHome Controller</friendlyName>
     <manufacturer>k-1</manufacturer>
     <manufacturerURL>http://k-1.com</manufacturerURL>
-    <modelDescription>Home Management Logic 1.0</modelDescription>
+    <modelDescription>MyHome Controller Logic 1.0</modelDescription>
     <modelName>MyHome</modelName>
     <modelNumber>1.0</modelNumber>
     <modelURL>http://k-1.com</modelURL>

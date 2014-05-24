@@ -4,17 +4,17 @@
   <actionList>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>Away</name>
+      <name>set_status_away</name>
       <run>return set_status_away(lul_device, lul_settings)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>Home</name>
+      <name>set_status_home</name>
       <run>return set_status_home(lul_device, lul_settings)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>Vacation</name>
+      <name>set_status_vacation</name>
       <run>return set_status_vacation(lul_device, lul_settings)</run>
     </action>
   </actionList>
