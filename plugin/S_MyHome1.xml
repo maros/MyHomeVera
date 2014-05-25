@@ -18,18 +18,36 @@
   </serviceStateTable>
   <actionList>
     <action>
-      <name>Home</name>
+      <name>set_status_home</name>
       <argumentList>
       </argumentList>
     </action>
 	<action>
-      <name>Away</name>
+      <name>set_status_away</name>
       <argumentList>
       </argumentList>
     </action>
 	<action>
-      <name>Vacation</name>
+      <name>set_status_vacation</name>
       <argumentList>
+      </argumentList>
+    </action>
+    <action>
+      <name>run_automator</name>
+      <argumentList>
+      </argumentList>
+    </action>
+    <action>
+      <name>blind_partial</name>
+      <argumentList>        
+        <argument>
+          <name>device</name>
+          <direction>in</direction>
+        </argument>
+        <argument>
+          <name>percentage</name>
+          <direction>in</direction>
+        </argument>
       </argumentList>
     </action>
   </actionList>

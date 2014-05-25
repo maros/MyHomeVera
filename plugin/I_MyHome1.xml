@@ -5,17 +5,27 @@
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>set_status_away</name>
-      <run>return set_status_away(lul_device, lul_settings)</run>
+      <run>return set_status_away()</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>set_status_home</name>
-      <run>return set_status_home(lul_device, lul_settings)</run>
+      <run>return set_status_home()</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>set_status_vacation</name>
-      <run>return set_status_vacation(lul_device, lul_settings)</run>
+      <run>return set_status_vacation()</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>blind_partial</name>
+      <run>return blind_partial(lul_settings.device,lul_settings.percentage)</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>run_automator</name>
+      <run>return run_automator()</run>
     </action>
   </actionList>
 </implementation>
