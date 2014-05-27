@@ -32,6 +32,7 @@
       <argumentList>
       </argumentList>
     </action>
+    <!-- Extra actions called by other scenes -->
     <action>
       <name>run_automator</name>
       <argumentList>
@@ -48,6 +49,11 @@
           <name>percentage</name>
           <direction>in</direction>
         </argument>
+      </argumentList>
+    </action>
+    <action>
+      <name>blinds_wakeup</name>
+      <argumentList>
       </argumentList>
     </action>
   </actionList>

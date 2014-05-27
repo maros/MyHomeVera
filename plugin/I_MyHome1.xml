@@ -17,6 +17,12 @@
       <name>set_status_vacation</name>
       <run>return set_status_vacation()</run>
     </action>
+    <!-- Extra actions called by other scenes -->
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>run_automator</name>
+      <run>return run_automator()</run>
+    </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>blind_partial</name>
@@ -24,8 +30,8 @@
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>run_automator</name>
-      <run>return run_automator()</run>
+      <name>blinds_wakeup</name>
+      <run>return blinds_wakeup()</run>
     </action>
   </actionList>
 </implementation>
