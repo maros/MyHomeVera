@@ -38,6 +38,7 @@ local TIMER_AWAY				= 300 	-- timer for alarm to be armed after leaving
 local TIMER_INTRUSION			= 60	-- timer for alarm to be disarmed after coming
 local TIMER_ALARM				= 600	-- timer for alarm
 
+local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
 
 local DEVICES					= {}
@@ -70,7 +71,7 @@ TEMPERATURE.DEFAULT				= 20
 local WEATHER					= {}
 WEATHER.POOR					= Set { "chanceflurries", "chancerain", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
 WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "partlycloudy", "partlysunny"  }
-WEATHER.GOOD					= Set { "clear", "hazy", "mostlysunny" }
+WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny" }
 
 -- 
 -- FUNCTION
@@ -444,33 +445,41 @@ function run_automator()
 	-- TODO: Window regulation
 end
 
-function weather_status() 
+function weather_status()
+	local weather = {}
+	
+	weather.condition 	= "POOR"
+	weather.temperature = tonumber(luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TMP_SENSOR_OUTSIDE))
+	weather.wind_speed 	= tonumber(luup.variable_get(SID_WEATHER,"WindSpeed",DEVICES.TMP_SENSOR_OUTSIDE))
+	--weather.rain		= luup.variable_get(SID_SECURITYSENSOR,"CurrentTemperature",DEVICES.RAIN_SENSOR)
+	
 	local weather = luup.variable_get(SID_WEATHER,"ConditionGroup",DEVICES.WEATHER)
 	for index, value in ipairs(WEATHER) do
 		if value.value[weather] then
-			return value.key
+			luup.log("[MyHome] Check weather " .. weather .. " is " .. value.key)
+			weather.condition = value.key
+			return weather
 		end
 	end
-	return "POOR"
+	
+	return weather
 end
 
 function blinds_temperature()
-	local inside_temperature = luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
-	local outside_temperature = luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TMP_SENSOR_OUTSIDE)
-	local weather_status = weather_status()
-	
-	local blinds_auto = read_or_init(SERVICE_ID,"BlindStatusAuto",SELF, 0)
+	local inside_temperature 	= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
+	local weather_status 		= weather_status()
+	local blinds_auto 			= read_or_init(SERVICE_ID,"BlindStatusAuto",SELF, 0)
 	
 	-- check weather
-	if (inside_temperature >= TEMPERATURE.MAX and weather_status == "GOOD") then
+	if (inside_temperature >= TEMPERATURE.MAX and weather_status.condition == "FAIR") then
 		-- check time
-		local time = os.date('*t');
+		local time = os.date('*t')
 		if (time.hour >= 10 and time.hour <= 14) then
 			-- check if blinds are already down
 			if blinds_auto == 0 then
 				luup.variable_set(SERVICE_ID,"BlindStatusAuto",1,SELF)
 				for device in pairs(DEVICES.BLINDS_SOUTH) do
-					blind_partial(device,BLINDS_PARTIAL)
+					blind_partial(device)
 				end
 			end
 			return
