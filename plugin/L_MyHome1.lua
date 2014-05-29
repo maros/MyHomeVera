@@ -26,6 +26,8 @@ local SELF	 					= nil
 local SERVICE_ID 				= "urn:upnp-k1-com:serviceId:MyHome1"
 
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { taget = 1}, 62)
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random", 62)
+--
 
 local STATUS					= {}
 STATUS.CHANGING 				= -1
@@ -304,7 +306,7 @@ function devices_get(type,room)
 		end
 		if match == true then
 			luup.log("FOUND DEVICE" .. device_data.device_type .. " - "..device_id)
-			table.insert(devices,device_id)
+			table.insert(devices,tonumber(device_id))
 		end
 	end
 	
@@ -530,27 +532,30 @@ function blinds_wakeup()
 end
 
 function lights_random()
-	lights = {}
+	local lights = devices_get(DID_LIGHT,nil)
 	
 	-- Get lights and return if some light is already running
-	for index, device in pairs(devices_get(DID_LIGHT,nil)) do
-    	local light_status = tonumber(luup.variable_get(SID_SWITCHPOWER,"Status",device))
-    	if light_status == "1" then
+	for index,device in pairs(lights) do
+    	local light_status = luup.variable_get(SID_SWITCHPOWER,"Status",device)
+    	if tonumber(light_status) == 1 then
 			return	    	
     	end
-    	table.insert(lights,device)
 	end
+	
+	luup.log("RANDOM".. table.getn(lights))
 
     local time = os.date('*t')
 	if (luup.is_night() and time.hour >= 18 and time.hour <= 22) then
-		device_index 	= math.ceil(math.random(0,table.getn(lights)))
+
+		device_index 	= math.floor(math.random(0,table.getn(lights)))
 		device_on		= math.floor(math.random(10))
 		device_time 	= math.floor(math.random(60,900))
+	luup.log("RANDOM Index:".. device_index.. " On:"..device_on.." Time: " ..device_time)
 		if (device_on == 1) then
 			log("[MyHome] Turn random light on " .. device)
 			local device = lights[device_index]
-			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, tonumber(device))
-			luup.call_delay("light_off", device_time, tostring(device))
+			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
+			luup.call_delay("light_off", device_time, device)
 		end
 	else
 		lights_set(0)

@@ -58,10 +58,5 @@
       <name>windows_temperature</name>
       <run>return windows_temperature()</run>
     </action>
-    <action>
-      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>lights_random</name>
-      <run>return lights_random()</run>
-    </action>
   </actionList>
 </implementation>
