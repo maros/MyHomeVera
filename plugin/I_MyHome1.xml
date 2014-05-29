@@ -31,7 +31,7 @@
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>blind_open</name>
-      <run>return blind_open()</run>
+      <run>return blind_open(lul_settings.device)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
@@ -45,13 +45,23 @@
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>lights_off</name>
-      <run>return lights_off()</run>
+      <name>lights_set</name>
+      <run>return lights_set(lul_settings.target)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>blinds_temperature</name>
       <run>return blinds_temperature()</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>windows_temperature</name>
+      <run>return windows_temperature()</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>lights_random</name>
+      <run>return lights_random()</run>
     </action>
   </actionList>
 </implementation>
