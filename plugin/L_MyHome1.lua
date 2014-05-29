@@ -25,6 +25,8 @@ end
 local SELF	 					= nil
 local SERVICE_ID 				= "urn:upnp-k1-com:serviceId:MyHome1"
 
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { taget = 1}, 62)
+
 local STATUS					= {}
 STATUS.CHANGING 				= -1
 STATUS.HOME 					= 0
@@ -48,6 +50,9 @@ DEVICES.TEMP_SENSOR_INSIDE		= 64
 DEVICES.TEMP_SENSOR_OUTSIDE		= 68
 DEVICES.WEATHER					= 67
 DEVICES.BLINDS_SOUTH			= { 21,22,23,24,28,29 }
+DEVICES.BLINDS_NORTH			= { 32,33,26,30,25,31 }
+-- DEVICES.WINDOWS					= { 111,111 }
+-- DEVICES.RAIN_SENSOR				= 111
 
 local SID_WINDOWCOVERING		= "urn:upnp-org:serviceId:WindowCovering1"
 local SID_SWITCHPOWER			= "urn:upnp-org:serviceId:SwitchPower1"
@@ -125,8 +130,13 @@ function set_status_away()
 	if (set_status(STATUS.AWAY)) then
 		set_if_changed(SERVICE_ID, "StatusLabel", "Nobody is home", SELF)
 		
+		-- Set thermostats to low setting
 		thermostats_set(TEMPERATURE.LOW)
-		lights_off()
+		
+		-- Turn all lights off
+		lights_set(0)
+		
+		-- TODO: Disarm remote alarm manager
 		
 		start_timer(TIMER_AWAY,'run_away')
 	end
@@ -137,9 +147,14 @@ function set_status_vacation()
 	if (set_status(STATUS.VACATION)) then
 		set_if_changed(SERVICE_ID, "StatusLabel", "Gone on vacation", SELF)
 
+		-- Set thermostats to vacation setting
 		thermostats_set(TEMPERATURE.VACATION)
+		
+		-- Close all windows
 		windows_close()
-		lights_off()
+		
+		-- Turn all lights off
+		lights_set(0)
 
 		start_timer(TIMER_AWAY,'run_away')
 	end
@@ -147,27 +162,34 @@ end
 
 -- Intrusion detected
 function run_intrusion()
-	luup.log("[MyHome] Intrusion was detected");
+	luup.log("[MyHome] Intrusion was detected")
 	start_timer(TIMER_INTRUSION,'run_alarm')
+	
+	-- TODO: Arm remote alarm manager
 end
 
--- Run alarm
+-- Run delayed alarm
 function run_alarm()
 	luup.log("[MyHome] ALARM!!!")
 	-- TODO: Send messages
 	-- TODO: Play sound
 	-- TODO: Run sirens
 	
+	-- Turn all lights on
 	lights_on()
+	
+	-- Open all blinds
 	blinds_open()
 	
 	start_timer(TIMER_ALARM,'run_reset')
 end
 
+-- Run delayed reset
 function run_reset()
 	luup.log("[MyHome] Reset alarm")
 	
 	-- TODO: Stop sirens
+	-- TODO: Disarm remote alarm manager
 	
 	set_status_away()
 end
@@ -274,16 +296,15 @@ function devices_get(type,room)
 	
 	for device_id, device_data in pairs(luup.devices) do
 		local match = true
-		if type ~= nil then
-			if device_data.device_type ~= type then
-				match = false
-			end
-			if device_data.room_num ~= room then
-				match = false
-			end
+		if type ~= nil and device_data.device_type ~= type then
+			match = false
+		end
+		if room ~= nil and device_data.room_num ~= room then
+			match = false
 		end
 		if match == true then
-			devices.insert(devices,device)
+			luup.log("FOUND DEVICE" .. device_data.device_type .. " - "..device_id)
+			table.insert(devices,device_id)
 		end
 	end
 	
@@ -365,8 +386,8 @@ function cancel_timer()
 end
 
 -- 
--- ACTORS
--- Various actors functions
+-- DEVICE
+-- Various device functions
 --
 
 function blind_partial(device,percentage)
@@ -380,7 +401,7 @@ function blind_partial(device,percentage)
     
     local status_key = "BlindStatus" .. device
     
-    local blind_position_device = luup.variable_get(SID_DIMMING,"LoadLevelStatus",device);
+    local blind_position_device = luup.variable_get(SID_DIMMING,"LoadLevelStatus",device)
     local blind_position_service = read_or_init(SERVICE_ID,status_key,SELF, blind_position_device)
     local blind_position = blind_position_service
     
@@ -389,7 +410,7 @@ function blind_partial(device,percentage)
     	luup.variable_set(SERVICE_ID, status_key, 0, SELF)
     end
     
-    local blind_time = math.floor(( blind_position - percentage ) / 100 * TIMER_BLINDS);
+    local blind_time = math.floor(( blind_position - percentage ) / 100 * TIMER_BLINDS)
 	percentage = math.floor(( 1 -( blind_time / TIMER_BLINDS)) * 100)
 	
 	if percentage ~= blind_position then
@@ -420,35 +441,39 @@ function blind_open(device)
     luup.variable_set(SERVICE_ID, "BlindStatus" .. device, 100, SELF)
 end
 
-function light_turn_off(device)
+function light_off(device)
 	device = tonumber(device)
 	luup.log("[MyHome] Turn light off " .. device)
-	luup.call_action(SID_POWER, "SetTarget", { newTargetValue = 0 }, device)
+	luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 0 }, device)
 end
+
+-- 
+-- ACTORS
+-- Various actor functions
+--
 
 -- Periodic automator run
 function run_automator()
-	local current_status = luup.variable_get(SERVICE_ID, "Status", SELF)
-	if current_status == STATUS.AWAY then
+	local data = read_config(SELF)
+	
+	if data.status == STATUS.AWAY then
 		
 		lights_random()
 		blinds_temperature()
 		windows_temperature()
 		
-	elseif STATUS.VACATION then
+	elseif data.status ==STATUS.VACATION then
 	
 		lights_random()
 		
-	elseif current_status == STATUS.HOME then
+	elseif data.status == STATUS.HOME then
 	
-	 	blinds_wakeup()
+	 	--blinds_wakeup()
 		thermostats_auto()
-		--blinds_temperature() ???
+		blinds_temperature() -- ???
 		windows_temperature()
 		
 	end
-	
-	-- TODO: Window regulation
 end
 
 function weather_status()
@@ -508,46 +533,65 @@ function lights_random()
 	lights = {}
 	
 	-- Get lights and return if some light is already running
-	for device, device_data in pairs(luup.devices_get(DID_LIGHT,nil)) do
-    	local light_status = luup.variable_get(SID_SWITCHPOWER,"Status",device);
+	for index, device in pairs(devices_get(DID_LIGHT,nil)) do
+    	local light_status = tonumber(luup.variable_get(SID_SWITCHPOWER,"Status",device))
     	if light_status == "1" then
 			return	    	
     	end
     	table.insert(lights,device)
 	end
 
-    local time = os.date('*t');
+    local time = os.date('*t')
 	if (luup.is_night() and time.hour >= 18 and time.hour <= 22) then
 		device_index 	= math.ceil(math.random(0,table.getn(lights)))
 		device_on		= math.floor(math.random(10))
 		device_time 	= math.floor(math.random(60,900))
 		if (device_on == 1) then
-			log("[MyHome] Turn random light o " .. device)
-			local device = devices[device_index]
+			log("[MyHome] Turn random light on " .. device)
+			local device = lights[device_index]
 			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, tonumber(device))
-			luup.call_delay("light_turn_off", device_time, tostring(device))
+			luup.call_delay("light_off", device_time, tostring(device))
 		end
+	else
+		lights_set(0)
 	end
 end
 
-function lights_off()
-	for device in pairs(luup.devices_get(DID_LIGHT,nil)) do
-		luup.call_action(SID_POWER, "SetTarget", { newTargetValue = 0 }, tonumber(device))
-	end
-end
-
-function lights_on() 
-	for device in pairs(luup.devices_get(DID_LIGHT,nil)) do
-		luup.call_action(SID_POWER, "SetTarget", { newTargetValue = 1 }, tonumber(device))
+function lights_set(target)
+	for index,device in pairs(devices_get(DID_LIGHT,nil)) do
+		luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = target }, tonumber(device))
 	end
 end
 
 function windows_temperature()
-	-- TODO
+	local inside_temperature	= tonumber(luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE))
+	local weather_status		= weather_status()
+	local windows_auto 			= read_or_init(SERVICE_ID,"WindowsStatusAuto",SELF, 0)
+	
+	-- check weather, wind
+	if (inside_temperature >= TEMPERATURE.MAX and inside_temperature > weather.temperature and (weather_status.condition == "FAIR" or weather_status.condition == "NORMAL") and weather_status.wind_speed < WIND_SPEED_LIMIT) then
+		-- check if blinds are already down
+		if windows_auto == 0 then
+			luup.variable_set(SERVICE_ID,"WindowsStatusAuto",1,SELF)
+			for index,device in pairs(DEVICES.BLINDS_SOUTH) do
+				blind_partial(device,BLINDS_PARTIAL)
+			end
+		end
+		return
+	end
+	
+	if windows_auto == 1 then
+		luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
+		for index,device in pairs(DEVICES.BLINDS_SOUTH) do
+			blind_open(device)
+		end
+	end
 end
 
 function windows_close()
 	-- TODO
+	--for index,device in pairs(DEVICES.WINDOWS) do
+	--end
 end
 
 function thermostats_set()
