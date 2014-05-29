@@ -57,6 +57,9 @@ local SID_SECURITYSENSOR		= "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
 
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
+local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
+local DID_WINDOWCOVERING		= "urn:schemas-micasaverde-com:device:WindowCovering:1"
+
 
 local SENSOR_VARIABLE_TRIPPED	= "Tripped"
 local SENSOR_VARIABLE_ARMED 	= "Armed"
@@ -80,16 +83,18 @@ WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny" }
 function initialize(lul_device)
 	SELF = lul_device
 	
-	luup.log("[MyHome] Initialize MyHome");
+	luup.log("[MyHome] Initialize MyHome")
 	
 	--local data = {}
   	--data = read_config(SELF)
   	
-  	for i in pairs(DEVICES.SEC_SENSOR) do
-    	local id = DEVICES.SEC_SENSOR[i];
-		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_ARMED, tonumber(id))
-		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, tonumber(id))
+  	for index,device in pairs(DEVICES.SEC_SENSOR) do
+		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_ARMED, device)
+		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
   	end
+	
+	-- TODO: Close windows on rain
+	-- luup.variable_watch("windows_close", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, DEVICES.RAIN_SENSOR)
 	
  	return true
 end
@@ -103,11 +108,14 @@ function set_status_home()
 		cancel_timer()
 		
 		-- Disarm sensors immediately
-	  	for i in pairs(DEVICES.SEC_SENSOR) do
-	    	local id = DEVICES.SEC_SENSOR[i];
-			luup.call_action(SID_SecuritySensor1, SENSOR_ACTION_ARM, {newArmedValue = 0}, tonumber(id))
+	  	for index,device in pairs(DEVICES.SEC_SENSOR) do
+			luup.call_action(SID_SecuritySensor1, SENSOR_ACTION_ARM, {newArmedValue = 0}, device)
 	  	end
 	  	
+	  	--luup.variable_set(SERVICE_ID,"BlindStatusAuto",0,SELF)
+	  	--luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
+	  	
+	  	-- Run initial automator
 	  	run_automator()
   	end
 end
@@ -167,9 +175,8 @@ end
 -- Run delayed away
 function run_away()
 	luup.log("[MyHome] Perform away")
-  	for i in pairs(DEVICES.SEC_SENSOR) do
-    	local id = DEVICES.SEC_SENSOR[i];
-		luup.call_action(SID_SecuritySensor1, SENSOR_ACTION_ARM, {newArmedValue = 1}, tonumber(id))
+  	for index,device in pairs(DEVICES.SEC_SENSOR) do
+		luup.call_action(SID_SecuritySensor1, SENSOR_ACTION_ARM, {newArmedValue = 1}, device)
   	end
 end
 
@@ -206,16 +213,15 @@ function check_tripped()
     	data = read_config(SELF)
   
     	-- Check Sensors Tripped Status
-		for i in pairs(DEVICES.SEC_SENSOR) do
-	  		local id = DEVICES.SEC_SENSOR[i];
-	  		local sensor_tripped = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_TRIPPED, tonumber(id))
+		for index,device in pairs(DEVICES.SEC_SENSOR) do
+	  		local sensor_tripped = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_TRIPPED, device)
 		  	if sensor_tripped == "1" then
-		    	local sensor_armed = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_ARMED, tonumber(id))
+		    	local sensor_armed = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_ARMED, device)
 		    	if sensor_armed == "1" then
 		    		-- Check Immediate Alarm 
 		    		for j in pairs(DEVICES.SEC_SENSOR_IMMEDIATE) do
-		    			local compare = DEVICES.SEC_SENSOR_IMMEDIATE[i];
-		    			if compare == id then
+		    			local compare = DEVICES.SEC_SENSOR_IMMEDIATE[i]
+		    			if compare == device then
 		    				run_alarm(SELF, lul_settings)
 		    				return
 		    			end
