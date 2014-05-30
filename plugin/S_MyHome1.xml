@@ -15,6 +15,12 @@
         <maximum>100</maximum>
       </allowedValueRange>
     </stateVariable>
+    <stateVariable sendEvents="yes">
+      <name>Remaining</name>
+      <dataType>ui1</dataType>
+      <defaultValue></defaultValue>
+      <shortCode>remaing</shortCode>
+    </stateVariable>
   </serviceStateTable>
   <actionList>
     <action>
