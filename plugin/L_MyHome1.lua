@@ -26,7 +26,7 @@ local SELF	 					= nil
 local SERVICE_ID 				= "urn:upnp-k1-com:serviceId:MyHome1"
 
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { taget = 1}, 62)
--- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random", 62)
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random",{}, 62)
 --
 
 local STATUS					= {}
@@ -53,6 +53,11 @@ DEVICES.TEMP_SENSOR_OUTSIDE		= 68
 DEVICES.WEATHER					= 67
 DEVICES.BLINDS_SOUTH			= { 21,22,23,24,28,29 }
 DEVICES.BLINDS_NORTH			= { 32,33,26,30,25,31 }
+DEVICES.BLINDS_WAKEUP			= { 33 }
+DEVICES.PRESENCE				= 73
+DEVICES.LOCK_BLINDS				= 74
+DEVICES.LOCK_WINDOWS			= 75
+
 -- DEVICES.WINDOWS					= { 111,111 }
 -- DEVICES.RAIN_SENSOR				= 111
 
@@ -61,6 +66,7 @@ local SID_SWITCHPOWER			= "urn:upnp-org:serviceId:SwitchPower1"
 local SID_DIMMING				= "urn:upnp-org:serviceId:Dimming1"
 local SID_TEMPERATURE			= "urn:upnp-org:serviceId:TemperatureSensor1"
 local SID_SECURITYSENSOR		= "urn:micasaverde-com:serviceId:SecuritySensor1"
+local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
 
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
@@ -73,7 +79,7 @@ local SENSOR_VARIABLE_ARMED 	= "Armed"
 local SENSOR_ACTION_ARM 		= "SetArmed"
 
 local TEMPERATURE				= {}
-TEMPERATURE.MAX					= 25
+TEMPERATURE.MAX					= 24
 TEMPERATURE.VACATION			= 15
 TEMPERATURE.LOW					= 18
 TEMPERATURE.DEFAULT				= 20
@@ -93,18 +99,30 @@ function initialize(lul_device)
 	luup.log("[MyHome] Initialize MyHome")
 	
 	--local data = {}
-  	--data = read_config(SELF)
+  	--data = read_config()
   	
   	for index,device in pairs(DEVICES.SEC_SENSOR) do
 		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_ARMED, device)
 		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
   	end
+  	
+  	luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, DEVICES.PRESENCE)
 	
 	-- TODO: Close windows on rain
 	-- luup.variable_watch("windows_close", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, DEVICES.RAIN_SENSOR)
 	
  	return true
 end
+
+function watch_presence()
+	luup.log("[MyHome] Presence set via VSwitch")
+	local presence_status = luup.variable_get(SID_SWITCHPOWER,"Status", DEVICES.PRESENCE)
+	if presence_status == 1 then
+		set_status_home()
+	elseif presence_status == 0 then
+		set_status_away()
+	end
+end	
 
 -- Manually set status = Home
 function set_status_home()
@@ -178,7 +196,7 @@ function run_alarm()
 	-- TODO: Run sirens
 	
 	-- Turn all lights on
-	lights_on()
+	lights_set(1)
 	
 	-- Open all blinds
 	blinds_open()
@@ -192,6 +210,7 @@ function run_reset()
 	
 	-- TODO: Stop sirens
 	-- TODO: Disarm remote alarm manager
+	lights_set(0)
 	
 	set_status_away()
 end
@@ -209,6 +228,11 @@ function set_status(new_status)
 	local current_status = luup.variable_get(SERVICE_ID, "Status", SELF)
   	if (tonumber(new_status) ~= tonumber(current_status)) then
   		luup.log("[MyHome] Set status to " .. new_status)
+  		local presence = 0
+  		if new_status == 0 then
+  			presence = 1
+  		end
+		luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = presence }, DEVICES.PRESENCE)
    		luup.variable_set(SERVICE_ID, "Status", new_status, SELF)
    		return true
    	end
@@ -219,9 +243,7 @@ end
 function watch_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
 	luup.log("[MyHome] Watched variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
 	
-	local data = {}
-    data = read_config(SELF)
-	
+	local data = read_config()
 	if (tonumber(data.status) >= 0 and tonumber(data.status) < STATUS.INTRUSION) then
 	  	luup.log("[MyHome] Callback data.status=" .. data.status , 100)
 	 	check_tripped()
@@ -229,13 +251,10 @@ function watch_callback(lul_device, lul_service, lul_variable, lul_value_old, lu
 end
 
 function check_tripped()
-  	local status = tonumber(read_or_init(SELF,SERVICE_ID, "Status",0))
+	local data = read_config()
   	local armed_tripped = 0
   
-  	if (status > 0 and status < STATUS.INTRUSION) then
-    	local data = {}
-    	data = read_config(SELF)
-  
+  	if (data.status > 0 and status < STATUS.INTRUSION) then
     	-- Check Sensors Tripped Status
 		for index,device in pairs(DEVICES.SEC_SENSOR) do
 	  		local sensor_tripped = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_TRIPPED, device)
@@ -266,10 +285,13 @@ end
 -- HELPER
 --
 
-function read_config(lul_device)
+function read_config()
 	local data = {}
-  	data.status			= read_or_init(lul_device,SERVICE_ID, "Status", 0)
-  	data.statuslabel	= read_or_init(lul_device,SERVICE_ID, "StatusLabel", "Disarmed")
+  	data.status			= read_or_init(SELF,SERVICE_ID, "Status", 0)
+  	data.statuslabel	= read_or_init(SELF,SERVICE_ID, "StatusLabel", "Disarmed")
+  	data.presence		= read_or_init(DEVICE.PRESENCE,SID_SWITCHPOWER, "Status", 0)
+  	data.lock_windows	= read_or_init(DEVICE.LOCK_WINDOWS,SID_SWITCHPOWER, "Status", 1)
+  	data.lock_blinds	= read_or_init(DEVICE.LOCK_BLINDS,SID_SWITCHPOWER, "Status", 1)
 	
 	return data
 end
@@ -456,7 +478,7 @@ end
 
 -- Periodic automator run
 function run_automator()
-	local data = read_config(SELF)
+	local data = read_config()
 	
 	if data.status == STATUS.AWAY then
 		
@@ -482,23 +504,33 @@ function weather_status()
 	local weather = {}
 	
 	weather.condition 	= "POOR"
-	weather.temperature = tonumber(luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TMP_SENSOR_OUTSIDE))
-	weather.wind_speed 	= tonumber(luup.variable_get(SID_WEATHER,"WindSpeed",DEVICES.TMP_SENSOR_OUTSIDE))
-	--weather.rain		= luup.variable_get(SID_SECURITYSENSOR,"CurrentTemperature",DEVICES.RAIN_SENSOR)
+	weather.rain		= false
+	weather.temperature = luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TMP_SENSOR_OUTSIDE)
+	weather.temperature = tonumber(weather.temperature)
+	weather.wind_speed 	= luup.variable_get(SID_WEATHER,"WindSpeed",DEVICES.TMP_SENSOR_OUTSIDE)
+	weather.wind_speed  = tonumber(weather.wind_speed)
+	-- weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",DEVICES.RAIN_SENSOR)
 	
 	local weather = luup.variable_get(SID_WEATHER,"ConditionGroup",DEVICES.WEATHER)
 	for index, value in ipairs(WEATHER) do
 		if value.value[weather] then
 			luup.log("[MyHome] Check weather " .. weather .. " is " .. value.key)
 			weather.condition = value.key
-			return weather
 		end
+	end
+	
+	if weather.condition == "POOR" or weather.rain_sensor == true then
+		weather.rain = true
 	end
 	
 	return weather
 end
 
 function blinds_temperature()
+	local data 					= read_config()
+	if data.blinds_lock then
+		return
+	end
 	local inside_temperature 	= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
 	local weather_status 		= weather_status()
 	local blinds_auto 			= read_or_init(SERVICE_ID,"BlindStatusAuto",SELF, 0)
@@ -528,7 +560,13 @@ function blinds_temperature()
 end
 
 function blinds_wakeup()
-	-- TODO: Move blinds up on weekdays at 7
+	local data = read_config()
+	
+	if data.status == 0 and data.lock_blinds == 0 then
+		for device in pairs(DEVICES.BLINDS_WAKEUP) do
+			blind_open(device)
+		end
+	end
 end
 
 function lights_random()
@@ -542,18 +580,18 @@ function lights_random()
     	end
 	end
 	
-	luup.log("RANDOM".. table.getn(lights))
-
     local time = os.date('*t')
+	-- DEBUG: if 1 then
 	if (luup.is_night() and time.hour >= 18 and time.hour <= 22) then
 
-		device_index 	= math.floor(math.random(0,table.getn(lights)))
-		device_on		= math.floor(math.random(10))
-		device_time 	= math.floor(math.random(60,900))
-	luup.log("RANDOM Index:".. device_index.. " On:"..device_on.." Time: " ..device_time)
+		local device 		= lights[math.random( #lights )]
+		local device_on		= math.floor(math.random(5))
+		local device_time 	= math.floor(math.random(100,900))
+		
+		luup.log("RANDOM Index:".. device.. " On:"..device_on.." Time: " ..device_time)
+		
 		if (device_on == 1) then
-			log("[MyHome] Turn random light on " .. device)
-			local device = lights[device_index]
+			luup.log("[MyHome] Turn random light on " .. device)
 			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
 			luup.call_delay("light_off", device_time, device)
 		end
@@ -569,31 +607,38 @@ function lights_set(target)
 end
 
 function windows_temperature()
-	local inside_temperature	= tonumber(luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE))
+	local data 					= read_config()
+	local inside_temperature	= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
 	local weather_status		= weather_status()
 	local windows_auto 			= read_or_init(SERVICE_ID,"WindowsStatusAuto",SELF, 0)
 	
-	-- check weather, wind
-	if (inside_temperature >= TEMPERATURE.MAX and inside_temperature > weather.temperature and (weather_status.condition == "FAIR" or weather_status.condition == "NORMAL") and weather_status.wind_speed < WIND_SPEED_LIMIT) then
-		-- check if blinds are already down
-		if windows_auto == 0 then
-			luup.variable_set(SERVICE_ID,"WindowsStatusAuto",1,SELF)
-			for index,device in pairs(DEVICES.BLINDS_SOUTH) do
-				blind_partial(device,BLINDS_PARTIAL)
-			end
-		end
-		return
-	end
+	inside_temperature = tonumber(inside_temperature)
 	
-	if windows_auto == 1 then
+	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WIND_SPEED_LIMIT then
 		luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
-		for index,device in pairs(DEVICES.BLINDS_SOUTH) do
-			blind_open(device)
+		windows_close()
+	elseif data.windows_lock == 0 then
+		-- check temperature and wind
+		if (inside_temperature >= TEMPERATURE.MAX and inside_temperature > (weather.temperature - 1)) then
+			-- check if blinds are already down
+			if windows_auto == 0 then
+				luup.variable_set(SERVICE_ID,"WindowsStatusAuto",1,SELF)
+				windows_open()
+			end
+		elseif windows_auto == 1 then
+			luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
+			windows_close()
 		end
 	end
 end
 
 function windows_close()
+	-- TODO
+	--for index,device in pairs(DEVICES.WINDOWS) do
+	--end
+end
+
+function windows_open()
 	-- TODO
 	--for index,device in pairs(DEVICES.WINDOWS) do
 	--end
