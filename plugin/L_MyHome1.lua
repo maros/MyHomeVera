@@ -293,6 +293,11 @@ function read_config()
   	data.lock_windows	= read_or_init(DEVICE.LOCK_WINDOWS,SID_SWITCHPOWER, "Status", 1)
   	data.lock_blinds	= read_or_init(DEVICE.LOCK_BLINDS,SID_SWITCHPOWER, "Status", 1)
 	
+	data.status			= tonumber(data.status)
+	data.presence		= tonumber(data.presence)
+	data.lock_windows	= tonumber(data.lock_windows)
+	data.lock_blinds	= tonumber(data.lock_blinds)
+	
 	return data
 end
 
