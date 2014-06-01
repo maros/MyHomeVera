@@ -44,12 +44,15 @@ local TIMER_ALARM				= 600	-- timer for alarm
 
 local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
+local LUMINOSITY_LEVEL			= 5
 
 local DEVICES					= {}
 DEVICES.SEC_SENSOR				= { 20,35,63 }
 DEVICES.SEC_SENSOR_IMMEDIATE	= { 35 }
+DEVICES.SEC_SENSOR_LIGHT		= { 63 = 57 }
 DEVICES.TEMP_SENSOR_INSIDE		= 64
 DEVICES.TEMP_SENSOR_OUTSIDE		= 68
+DEVICES.LIGHT_SENSOR			= 65
 DEVICES.WEATHER					= 67
 DEVICES.BLINDS_SOUTH			= { 21,22,23,24,28,29 }
 DEVICES.BLINDS_NORTH			= { 32,33,26,30,25,31 }
@@ -57,9 +60,8 @@ DEVICES.BLINDS_WAKEUP			= { 33 }
 DEVICES.PRESENCE				= 73
 DEVICES.LOCK_BLINDS				= 74
 DEVICES.LOCK_WINDOWS			= 75
-
--- DEVICES.WINDOWS					= { 111,111 }
--- DEVICES.RAIN_SENSOR				= 111
+DEVICES.WINDOWS					= { 111,111 } -- TODO
+DEVICES.RAIN_SENSOR				= 111 -- TODO
 
 local SID_WINDOWCOVERING		= "urn:upnp-org:serviceId:WindowCovering1"
 local SID_SWITCHPOWER			= "urn:upnp-org:serviceId:SwitchPower1"
@@ -67,17 +69,17 @@ local SID_DIMMING				= "urn:upnp-org:serviceId:Dimming1"
 local SID_TEMPERATURE			= "urn:upnp-org:serviceId:TemperatureSensor1"
 local SID_SECURITYSENSOR		= "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
-local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
+local SID_VSWITCH				= "urn:upnp-org:serviceId:VSwitch1"
 local SID_LUMINSOITY			= "urn:schemas-micasaverde-com:service:LightSensor:1"
 
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
 local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
 local DID_WINDOWCOVERING		= "urn:schemas-micasaverde-com:device:WindowCovering:1"
 
-
 local SENSOR_VARIABLE_TRIPPED	= "Tripped"
 local SENSOR_VARIABLE_ARMED 	= "Armed"
 local SENSOR_ACTION_ARM 		= "SetArmed"
+
 
 local TEMPERATURE				= {}
 TEMPERATURE.MAX					= 24
@@ -103,28 +105,30 @@ function initialize(lul_device)
   	--data = read_config()
   	
   	for index,device in pairs(DEVICES.SEC_SENSOR) do
-		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_ARMED, device)
-		luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
+		-- luup.variable_watch("watch_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_ARMED, device)
+		luup.variable_watch("watch_alarm_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
   	end
   	
-  	luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, DEVICES.PRESENCE)
-	
   	for device,light in pairs(DEVICES.SEC_SENSOR_LIGHT) do
 		luup.variable_watch("watch_light_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
   	end
+  	
+  	-- luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, DEVICES.PRESENCE)
+  	-- luup.variable_watch("watch_presence", SID_VSWITCH, nil, DEVICES.PRESENCE)
 	-- TODO: Close windows on rain
 	-- luup.variable_watch("windows_close", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, DEVICES.RAIN_SENSOR)
 	
  	return true
 end
 
-function watch_presence()
+function watch_presence(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
 	luup.log("[MyHome] Presence set via VSwitch")
-	local presence_status = luup.variable_get(SID_SWITCHPOWER,"Status", DEVICES.PRESENCE)
-	if presence_status == 1 then
-		set_status_home()
-	elseif presence_status == 0 then
-		set_status_away()
+	if lul_value_old ~= lul_value_new then
+		if lul_value_new == 1 then
+			set_status_home()
+		elseif lul_value_new == 0 then
+			set_status_away()
+		end
 	end
 end	
 
@@ -244,24 +248,17 @@ function set_status(new_status)
 end
 
 -- Callback handling
-function watch_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	luup.log("[MyHome] Watched variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
+function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
+	luup.log("[MyHome] Watched alarm variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
 	
 	local data = read_config()
-	if (tonumber(data.status) >= 0 and tonumber(data.status) < STATUS.INTRUSION) then
+	
+	if (data.status >= 0 and data.status < STATUS.INTRUSION) then
 	  	luup.log("[MyHome] Callback data.status=" .. data.status , 100)
-	 	check_tripped()
-	end
-end
+	  	local armed_tripped = 0
 
-function check_tripped()
-	local data = read_config()
-  	local armed_tripped = 0
-  
-  	if (data.status > 0 and status < STATUS.INTRUSION) then
     	-- Check Sensors Tripped Status
 		for index,device in pairs(DEVICES.SEC_SENSOR) do
-	  		local sensor_tripped = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_TRIPPED, device)
 		  	if sensor_tripped == "1" then
 		    	local sensor_armed = luup.variable_get(SID_SECURITYSENSOR,SENSOR_VARIABLE_ARMED, device)
 		    	if sensor_armed == "1" then
@@ -282,7 +279,8 @@ function check_tripped()
 		if armed_tripped > 0 then
 		  	run_intrusion(SELF, lul_settings)
 		end
-  	end
+	end
+end
 
 function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
 	luup.log("[MyHome] Watched light variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
