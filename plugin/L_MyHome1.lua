@@ -536,27 +536,31 @@ function blinds_temperature()
 	if data.blinds_lock then
 		return
 	end
+	
 	local inside_temperature 	= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
 	local weather_status 		= weather_status()
 	local blinds_auto 			= read_or_init(SERVICE_ID,"BlindStatusAuto",SELF, 0)
+	local action 				= "keep"
 	
-	-- check weather
-	if (inside_temperature >= TEMPERATURE.MAX and weather_status.condition == "FAIR") then
-		-- check time
-		local time = os.date('*t')
-		if (time.hour >= 10 and time.hour <= 14) then
-			-- check if blinds are already down
-			if blinds_auto == 0 then
-				luup.variable_set(SERVICE_ID,"BlindStatusAuto",1,SELF)
-				for device in pairs(DEVICES.BLINDS_SOUTH) do
-					blind_partial(device)
-				end
-			end
-			return
+	local time = os.date('*t')
+	if (time.hour < 10 and time.hour > 14) then
+		if blinds_auto == 1 then
+			action = "open"
 		end
+	elseif (inside_temperature >= TEMPERATURE.MAX and weather_status.condition == "FAIR") then
+		if blinds_auto == 0 then
+			action = "close"
+		end
+	elseif (weather_status.condition ~= "FAIR" or inside_temperature < (TEMPERATURE.MAX-1)) then
+		action = "open"
 	end
 	
-	if blinds_auto == 1 then
+	if action == "open" then
+		luup.variable_set(SERVICE_ID,"BlindStatusAuto",1,SELF)
+		for device in pairs(DEVICES.BLINDS_SOUTH) do
+			blind_partial(device)
+		end
+	elseif action == "close" then
 		luup.variable_set(SERVICE_ID,"BlindStatusAuto",0,SELF)
 		for device in pairs(DEVICES.BLINDS_SOUTH) do
 			blind_open(device)
@@ -616,24 +620,27 @@ function windows_temperature()
 	local inside_temperature	= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",DEVICES.TEMP_SENSOR_INSIDE)
 	local weather_status		= weather_status()
 	local windows_auto 			= read_or_init(SERVICE_ID,"WindowsStatusAuto",SELF, 0)
+	local action 				= "keep"
 	
 	inside_temperature = tonumber(inside_temperature)
 	
 	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WIND_SPEED_LIMIT then
-		luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
-		windows_close()
+		action = "close"
 	elseif data.windows_lock == 0 then
 		-- check temperature and wind
-		if (inside_temperature >= TEMPERATURE.MAX and inside_temperature > (weather.temperature - 1)) then
-			-- check if blinds are already down
-			if windows_auto == 0 then
-				luup.variable_set(SERVICE_ID,"WindowsStatusAuto",1,SELF)
-				windows_open()
-			end
-		elseif windows_auto == 1 then
-			luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
-			windows_close()
+		if (inside_temperature >= TEMPERATURE.MAX and inside_temperature > (weather.temperature - 1) and windows_auto == 0) then
+			action = "open"
+		elseif (windows_auto == 1 and inside_temperature < (TEMPERATURE.MAX-1)) then
+			action = "close"
 		end
+	end
+	
+	if action == "close" then
+		luup.variable_set(SERVICE_ID,"WindowsStatusAuto",0,SELF)
+		windows_close()
+	elseif action == "open" then
+		luup.variable_set(SERVICE_ID,"WindowsStatusAuto",1,SELF)
+		windows_open()
 	end
 end
 
