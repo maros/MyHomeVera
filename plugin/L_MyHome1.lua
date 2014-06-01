@@ -65,6 +65,9 @@ local DEVICES 					= {
 		["class"]						= "TempSensor",
 		["location"]					= "outside"
 	},
+	[65]							= {
+		["class"]						= "LightSensor",
+	},
 	[67]							= {
 		["class"]						= "Weather"
 	},
@@ -145,7 +148,7 @@ local SID_TEMPERATURE			= "urn:upnp-org:serviceId:TemperatureSensor1"
 local SID_SECURITYSENSOR		= "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
 local SID_VSWITCH				= "urn:upnp-org:serviceId:VSwitch1"
-local SID_LUMINSOITY			= "urn:schemas-micasaverde-com:service:LightSensor:1"
+local SID_LUMINSOITY			= "urn:micasaverde-com:serviceId:LightSensor1"
 
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
 local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
@@ -173,7 +176,7 @@ function initialize(lul_device)
 	
   	local data = read_config()
   	
-  	luup.log("[MyHome] Fixup presence status")
+  	luup.log("[MyHome] Fixup device status")
 	if data.status == 0 then
 		if data.presence == 0 then
 			luup.log("[MyHome] Detected presence mismatch")
@@ -190,9 +193,11 @@ function initialize(lul_device)
   	
   	luup.log("[MyHome] Watch Security sensors")
   	for index,device in pairs(devices_sec_sensor()) do
+  		luup.log("[MyHome] Security" .. device)
 		-- luup.variable_watch("watch_callback", SID_SECURITYSENSOR, "Armed", device)
 		luup.variable_watch("watch_alarm_callback", SID_SECURITYSENSOR, "Tripped", device)
-		if (device_attr(device,"immediate") == true) then
+		if device_attr(device,"trigger") ~= nil then
+			luup.log("[MyHome] TRIGGER LIGHT" .. device)
 			luup.variable_watch("watch_light_callback", SID_SECURITYSENSOR, "Tripped", device)
 		end
   	end
@@ -204,14 +209,14 @@ function initialize(lul_device)
 	
 	tick()
 	
+	--luup.call_delay("run_automator", 60, "")
+	
 	luup.log("[MyHome] Finished Initialize")
 	
  	return true
 end
 
 function watch_presence(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	SELF = lul_device
-
 	luup.log("[MyHome] Presence set via VSwitch")
 	if lul_value_old ~= lul_value_new then
 		if lul_value_new == 1 then
@@ -224,8 +229,6 @@ end
 
 -- Manually set status = Home
 function set_status_home(lul_device)
-	SELF = lul_device
-
 	if (set_status(STATUS.HOME)) then
 		set_if_changed(SID_SELF, "StatusLabel", "Somebody is home", SELF)
 		
@@ -234,7 +237,7 @@ function set_status_home(lul_device)
 		
 		-- Disarm sensors immediately
 	  	for index,device in pairs(devices_sec_sensor()) do
-			luup.call_action(SID_SecuritySensor1, "SetArmed", {newArmedValue = 0}, device)
+			luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 0}, device)
 	  	end
 	  	
 	  	-- Run initial automator
@@ -244,8 +247,6 @@ end
 
 -- Manually set status = Away
 function set_status_away(lul_device)
-	SELF = lul_device
-
 	if (set_status(STATUS.AWAY)) then
 		set_if_changed(SID_SELF, "StatusLabel", "Nobody is home", SELF)
 		
@@ -263,8 +264,6 @@ end
 
 -- Manually set status = Vacation
 function set_status_vacation(lul_device)
-	SELF = lul_device
-
 	if (set_status(STATUS.VACATION)) then
 		set_if_changed(SID_SELF, "StatusLabel", "Gone on vacation", SELF)
 
@@ -284,7 +283,7 @@ end
 -- Intrusion detected
 function run_intrusion()
 	luup.log("[MyHome] Intrusion was detected")
-	start_timer(TIMER.INTRUSION,'run_alarm')
+	start_timer(TIMER.INTRUSION,"run_alarm")
 	
 	-- TODO: Arm remote alarm manager
 end
@@ -306,7 +305,7 @@ function run_alarm()
 	-- Close all windows
 	windows_close()
 	
-	start_timer(TIMER.ALARM,'run_reset')
+	start_timer(TIMER.ALARM,"run_reset")
 end
 
 -- Run delayed reset
@@ -324,7 +323,7 @@ end
 function run_away()
 	luup.log("[MyHome] Perform away")
   	for index,device in pairs(devices_sec_sensor()) do
-		luup.call_action(SID_SecuritySensor1, "SetArmed", {newArmedValue = 1}, device)
+		luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 1}, device)
   	end
 end
 
@@ -351,12 +350,10 @@ end
 
 -- Callback handling
 function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	SELF = lul_device
-	
 	luup.log("[MyHome] Watched alarm variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
-	
-	local data = read_config()
-	
+
+	local data 				= read_config()
+
 	if (data.status >= 0 and data.status < STATUS.INTRUSION) then
 	  	luup.log("[MyHome] Callback data.status=" .. data.status , 100)
 	  	local armed_tripped = 0
@@ -384,27 +381,30 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 end
 
 function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	SELF = lul_device
-	
 	luup.log("[MyHome] Watched light variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
 
-	local data 			= read_config()
-	local luminosity 	= luup.variable_get(SID_LUMINSOITY,"LoadLevelStatus",device_search_single({ ["class"] = "LightSensor" }))
+	local data 				= read_config()
+	local triggered_device 	= device_attr(lul_device,"trigger")
 	
-	if lul_variable == "Tripped" then
-		-- Tripped
-		if (lul_value_old == 0 and lul_value_new == 1) then
-			if tonumber(luminosity) < LUMINOSITY_LEVEL then
-				for device,light in pairs() do
-					if device == lul_device then
-						luup.log("[MyHome] Movement triggers light on " .. device)
-						luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
-					end
-				end
-			else
-				light_off(device)
-			end
-		end
+	
+	if triggered_device == nil then
+		luup.log("[MyHome] trigger nil")
+		return
+	end
+	
+	local status_key 		= "LightStatus" .. triggered_device
+	local current_status 	= luup.variable_get(SID_SWITCHPOWER,"Status",triggered_device)
+	local luminosity 		= luup.variable_get(SID_LUMINSOITY,"CurrentLevel",device_search_single({ ["class"] = "LightSensor" }))
+	luminosity 				= tonumber(luminosity)
+	current_status			= tonumber(current_status)
+	lul_value_old			= tonumber(lul_value_old)
+	lul_value_new			= tonumber(lul_value_new)
+	
+	if (current_status == 0 and lul_value_old == 0 and lul_value_new == 1 and luminosity <= LUMINOSITY_LEVEL) then
+		light_on(triggered_device)
+	elseif (current_status == 1 and lul_value_old == 1 and lul_value_new == 0) then
+		luup.log("[MyHome] OFF")
+		light_off(triggered_device)
 	end
 end
 
@@ -419,25 +419,21 @@ function read_config()
   	data.statuslabel		= read_or_init(SID_SELF, "StatusLabel", SELF, "Disarmed")
   	
   	data.device_presence	= device_search_single({ ["class"] = "Presence" })
-  	if (data.device_presence ~= nil) then
-  		luup.log("[MyHome] PRESENCE DEVICE " .. data.device_presence)
-	  	data.presence			= luup.variable_get(SID_VSWITCH,"STATUS",data.device_presence)
-		data.presence			= tonumber(data.presence)
-		data.device_presence	= tonumber(data.device_presence)
-  	end
+  	data.device_lock_windows= device_search_single({ ["class"] = "LockWindows" })
+  	data.device_lock_blinds	= device_search_single({ ["class"] = "LockBlinds" })
   	
-  	--data.device_lock_windows= device_search_single({ ["class"] = "LockWindows" })
-  	--data.device_lock_blinds	= device_search_single({ ["class"] = "LockBlinds" })
-  	
-  	
-  	--data.lock_windows		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_windows)
-  	--data.lock_blinds		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_blinds)
-  	
-	data.status				= tonumber(data.status)
-	--data.lock_windows		= tonumber(data.lock_windows)
-	--data.lock_blinds		= tonumber(data.lock_blinds)
+	data.device_presence	= tonumber(data.device_presence)
 	data.device_lock_windows= tonumber(data.device_lock_windows)
 	data.device_lock_blinds = tonumber(data.device_lock_blinds)
+
+  	data.presence			= luup.variable_get(SID_VSWITCH,"STATUS",data.device_presence)
+  	data.lock_windows		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_windows)
+  	data.lock_blinds		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_blinds)
+  	
+	data.presence			= tonumber(data.presence)
+	data.status				= tonumber(data.status)
+	data.lock_windows		= tonumber(data.lock_windows)
+	data.lock_blinds		= tonumber(data.lock_blinds)
 	
 	return data
 end
@@ -497,7 +493,6 @@ function devices_search(search)
 					end
 				else
 					local compare_value =  device_data[search_key]
-					luup.log("[MyHome] Compare Device" .. search_key .. " = ".. search_value.. " for "..device_id)
 					if compare_value == nil or compare_value ~= search_value then
 						match = false
 					end
@@ -655,6 +650,14 @@ function light_off(device)
 	device = tonumber(device)
 	luup.log("[MyHome] Turn light off " .. device)
 	luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 0 }, device)
+	luup.variable_set(SID_SELF, "LightStatus" .. device, 0, SELF)
+end
+
+function light_on(device)
+	device = tonumber(device)
+	luup.log("[MyHome] Turn light on " .. device)
+	luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
+	luup.variable_set(SID_SELF, "LightStatus" .. device, 1, SELF)
 end
 
 -- 
@@ -668,24 +671,37 @@ function run_automator()
 
 	local data = read_config()
 	
---	if data.status == STATUS.AWAY then
---		
---		lights_random()
---		blinds_temperature()
---		windows_temperature()
---		
---	elseif data.status ==STATUS.VACATION then
---	
---		lights_random()
---		
---	elseif data.status == STATUS.HOME then
---	
---	 	--blinds_wakeup()
---		thermostats_auto()
---		blinds_temperature() -- ???
---		windows_temperature()
---		
---	end
+	-- Check status
+	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
+		if luup.variable_get(SID_SWITCHPOWER,"Status",device) == 0 then
+			set_if_changed(SID_SELF, "LightStatus" .. device, 0, SELF)
+		end
+	end
+	for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
+		if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
+			set_if_changed(SID_SELF, "BlindStatus" .. device, 0, SELF)
+		end
+	end
+	
+	
+	if data.status == STATUS.AWAY then
+		
+		lights_random()
+		blinds_temperature()
+		windows_temperature()
+		
+	elseif data.status ==STATUS.VACATION then
+	
+		lights_random()
+		
+	elseif data.status == STATUS.HOME then
+	
+	 	--blinds_wakeup()
+		thermostats_auto()
+		blinds_temperature() -- ???
+		windows_temperature()
+		
+	end
 end
 
 function temperature_inside()
@@ -699,7 +715,7 @@ function weather_status()
 	
 	local device_weather 		= device_search_single({ ["class"] = "Weather" })
 	local device_temperature 	= device_search_single({ ["class"] = "TempSensor", ["location"] = "outside" })
-	local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
+	--local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
 	
 	weather.condition 	= "POOR"
 	weather.rain		= false
@@ -711,7 +727,7 @@ function weather_status()
 	
 	local weather = luup.variable_get(SID_WEATHER,"ConditionGroup",device_weather)
 	for index, value in ipairs(WEATHER) do
-		if value.value[weather] then
+		if value.value[weather] ~= nil then
 			weather.condition = value.key
 		end
 	end
@@ -796,7 +812,7 @@ function lights_random()
 		
 		if (device_on == 1) then
 			luup.log("[MyHome] Turn random light on " .. device)
-			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
+			light_on(device)
 			luup.call_delay("light_off", device_time, device)
 		end
 	else
@@ -808,7 +824,11 @@ function lights_set(target)
 	luup.log("[MyHome] Set all light to " .. target)
 	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
 		luup.log("[MyHome] Set light " .. device)
-		--luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = target }, tonumber(device))
+		if target == 1 then
+			light_on(device)
+		elseif target == 0 then
+			light_off(device)
+		end
 	end
 end
 
