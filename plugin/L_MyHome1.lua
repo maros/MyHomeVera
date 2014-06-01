@@ -193,11 +193,9 @@ function initialize(lul_device)
   	
   	luup.log("[MyHome] Watch Security sensors")
   	for index,device in pairs(devices_sec_sensor()) do
-  		luup.log("[MyHome] Security" .. device)
 		-- luup.variable_watch("watch_callback", SID_SECURITYSENSOR, "Armed", device)
 		luup.variable_watch("watch_alarm_callback", SID_SECURITYSENSOR, "Tripped", device)
 		if device_attr(device,"trigger") ~= nil then
-			luup.log("[MyHome] TRIGGER LIGHT" .. device)
 			luup.variable_watch("watch_light_callback", SID_SECURITYSENSOR, "Tripped", device)
 		end
   	end
@@ -209,7 +207,7 @@ function initialize(lul_device)
 	
 	tick()
 	
-	--luup.call_delay("run_automator", 60, "")
+	run_automator()
 	
 	luup.log("[MyHome] Finished Initialize")
 	
@@ -239,9 +237,6 @@ function set_status_home(lul_device)
 	  	for index,device in pairs(devices_sec_sensor()) do
 			luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 0}, device)
 	  	end
-	  	
-	  	-- Run initial automator
-	  	run_automator()
   	end
 end
 
@@ -500,7 +495,7 @@ function devices_search(search)
 			end
 		end
 		if match == true then
-			luup.log("[MyHome] Found Device " .. device_data.device_type .. " - "..device_id)
+			--luup.log("[MyHome] Found Device " .. device_data.device_type .. " - "..device_id)
 			table.insert(devices,tonumber(device_id))
 		end
 	end
@@ -702,6 +697,8 @@ function run_automator()
 		windows_temperature()
 		
 	end
+	
+	luup.call_delay("run_automator", 60, "")
 end
 
 function temperature_inside()
@@ -711,12 +708,12 @@ function temperature_inside()
 end
 
 function weather_status()
-	local weather = {}
 	
 	local device_weather 		= device_search_single({ ["class"] = "Weather" })
 	local device_temperature 	= device_search_single({ ["class"] = "TempSensor", ["location"] = "outside" })
 	--local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
 	
+	local weather = {}
 	weather.condition 	= "POOR"
 	weather.rain		= false
 	weather.temperature = luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",device_temperature)
@@ -725,16 +722,18 @@ function weather_status()
 	weather.wind_speed  = tonumber(weather.wind_speed)
 	-- weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",device_rain)
 	
-	local weather = luup.variable_get(SID_WEATHER,"ConditionGroup",device_weather)
-	for index, value in ipairs(WEATHER) do
-		if value.value[weather] ~= nil then
-			weather.condition = value.key
+	local condition = luup.variable_get(SID_WEATHER,"ConditionGroup",device_weather)
+	
+	for key, value in pairs(WEATHER) do
+		if value[condition] ~= nil then
+			weather.condition = key
 		end
 	end
 	
-	if weather.condition == "POOR" or weather.rain_sensor == true then
-		weather.rain = true
-	end
+	-- TODO
+	--if weather.condition == "POOR" or weather.rain_sensor == true then
+	--	weather.rain = true
+	--end
 	
 	luup.log("[MyHome] Check weather is " .. weather.condition)
 	return weather
@@ -767,12 +766,12 @@ function blinds_temperature()
 	
 	if action == "open" then
 		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
-		for device in pairs(devices_blinds) do
+		for index,device in pairs(devices_blinds) do
 			blind_partial(device)
 		end
 	elseif action == "close" then
 		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
-		for device in pairs(devices_blinds) do
+		for index,device in pairs(devices_blinds) do
 			blind_open(device)
 		end
 	end
