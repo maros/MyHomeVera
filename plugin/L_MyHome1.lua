@@ -68,6 +68,7 @@ local SID_TEMPERATURE			= "urn:upnp-org:serviceId:TemperatureSensor1"
 local SID_SECURITYSENSOR		= "urn:micasaverde-com:serviceId:SecuritySensor1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
 local SID_WEATHER				= "urn:upnp-micasaverde-com:serviceId:Weather1"
+local SID_LUMINSOITY			= "urn:schemas-micasaverde-com:service:LightSensor:1"
 
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
 local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
@@ -108,6 +109,9 @@ function initialize(lul_device)
   	
   	luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, DEVICES.PRESENCE)
 	
+  	for device,light in pairs(DEVICES.SEC_SENSOR_LIGHT) do
+		luup.variable_watch("watch_light_callback", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, device)
+  	end
 	-- TODO: Close windows on rain
 	-- luup.variable_watch("windows_close", SID_SECURITYSENSOR, SENSOR_VARIABLE_TRIPPED, DEVICES.RAIN_SENSOR)
 	
@@ -279,6 +283,29 @@ function check_tripped()
 		  	run_intrusion(SELF, lul_settings)
 		end
   	end
+
+function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
+	luup.log("[MyHome] Watched light variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
+
+	local data 			= read_config()
+	local luminosity 	= luup.variable_get(SID_LUMINSOITY,"LoadLevelStatus",DEVICES.LIGHT_SENSOR)
+	
+	if lul_variable == SENSOR_VARIABLE_TRIPPED then
+		-- Tripped
+		if (lul_value_old == 0 and lul_value_new == 1) then
+			if tonumber(luminosity) < LUMINOSITY_LEVEL then
+				for device,light in pairs() 
+					if device == lul_device then
+						luup.log("[MyHome] Movement triggers light on " .. device)
+						luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
+						
+					end
+				end
+			else
+				light_off(device)
+			end
+		end
+	end
 end
 
 -- 
