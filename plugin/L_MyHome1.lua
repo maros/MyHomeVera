@@ -450,7 +450,7 @@ end
 
 function read_or_init(service_id, name, device, default)
 	local value = luup.variable_get(service_id,name, device)
- 	if (value == nil) then
+ 	if (value == nil or value == "") then
    		value = default
    		luup.variable_set(service_id,name,value,device)
  	end
@@ -612,9 +612,11 @@ function blind_partial(device,percentage)
     
     local status_key = "BlindStatus" .. device
     
-    local blind_position_device = luup.variable_get(SID_DIMMING,"LoadLevelStatus",device)
-    local blind_position_service = read_or_init(SID_SELF,status_key,SELF, blind_position_device)
-    local blind_position = blind_position_service
+    local blind_position_device 	= luup.variable_get(SID_DIMMING,"LoadLevelStatus",device)
+    blind_position_device 			= tonumber(blind_position_device)
+    local blind_position_service	= read_or_init(SID_SELF,status_key,SELF, blind_position_device)
+    blind_position_service 			= tonumber(blind_position_service)
+    local blind_position 			= blind_position_service
     
     if (blind_position_device == 0 and blind_position_service ~= 0) then
     	blind_position = 0
@@ -758,6 +760,7 @@ end
 function blinds_temperature()
 	local data 					= read_config()
 	if data.lock_blinds == 1 then
+		luup.log("[MyHome] Blinds locked")
 		return
 	end
 	
@@ -841,9 +844,10 @@ function lights_random()
 end
 
 function lights_set(target)
+	target = tonumber(target)
+
 	luup.log("[MyHome] Set all light to " .. target)
 	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
-		luup.log("[MyHome] Set light " .. device)
 		if target == 1 then
 			light_on(device)
 		elseif target == 0 then
