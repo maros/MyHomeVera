@@ -44,6 +44,8 @@ TIMER.ALARM						= 600	-- timer for alarm
 local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
 local LUMINOSITY_LEVEL			= 5
+local BLINDS_TIME_START			= 10
+local BLINDS_TIME_END			= 15
 
 local DEVICES 					= {
 	[20]							= {
@@ -128,6 +130,9 @@ local DEVICES 					= {
 	},
 	[75]							= {
 		["class"]						= "LockWindows"
+	},
+	[76]							= {
+		["class"]						= "LockAll"
 	}
 --	[111]							= {
 --		["class"]					= "RainSensor",
@@ -155,6 +160,7 @@ local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
 local DID_WINDOWCOVERING		= "urn:schemas-micasaverde-com:device:WindowCovering:1"
 
 local TEMPERATURE				= {}
+TEMPERATURE.BLIND_OUTSIDE		= 21	
 TEMPERATURE.MAX					= 24
 TEMPERATURE.VACATION			= 15
 TEMPERATURE.LOW					= 18
@@ -162,8 +168,8 @@ TEMPERATURE.DEFAULT				= 20
 
 local WEATHER					= {}
 WEATHER.POOR					= Set { "chanceflurries", "chancerain", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
-WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "partlycloudy", "partlysunny"  }
-WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny" }
+WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "partlycloudy" }
+WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny" }
 
 -- 
 -- FUNCTION
@@ -192,7 +198,7 @@ function initialize(lul_device)
 	end
   	
   	luup.log("[MyHome] Watch Security sensors")
-  	for index,device in pairs(devices_sec_sensor()) do
+  	for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
 		-- luup.variable_watch("watch_callback", SID_SECURITYSENSOR, "Armed", device)
 		luup.variable_watch("watch_alarm_callback", SID_SECURITYSENSOR, "Tripped", device)
 		if device_attr(device,"trigger") ~= nil then
@@ -234,7 +240,7 @@ function set_status_home(lul_device)
 		cancel_timer()
 		
 		-- Disarm sensors immediately
-	  	for index,device in pairs(devices_sec_sensor()) do
+	  	for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
 			luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 0}, device)
 	  	end
   	end
@@ -317,7 +323,7 @@ end
 -- Run delayed away
 function run_away()
 	luup.log("[MyHome] Perform away")
-  	for index,device in pairs(devices_sec_sensor()) do
+  	for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
 		luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 1}, device)
   	end
 end
@@ -354,7 +360,7 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 	  	local armed_tripped = 0
 
     	-- Check Sensors Tripped Status
-		for index,device in pairs(devices_sec_sensor()) do
+		for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
 		  	if sensor_tripped == "1" then
 		    	local sensor_armed = luup.variable_get(SID_SECURITYSENSOR,"Armed", device)
 		    	if sensor_armed == "1" then
@@ -416,19 +422,28 @@ function read_config()
   	data.device_presence	= device_search_single({ ["class"] = "Presence" })
   	data.device_lock_windows= device_search_single({ ["class"] = "LockWindows" })
   	data.device_lock_blinds	= device_search_single({ ["class"] = "LockBlinds" })
+  	data.device_lock_all	= device_search_single({ ["class"] = "LockAll" })
   	
 	data.device_presence	= tonumber(data.device_presence)
 	data.device_lock_windows= tonumber(data.device_lock_windows)
 	data.device_lock_blinds = tonumber(data.device_lock_blinds)
+	data.device_lock_all 	= tonumber(data.device_lock_all)
 
   	data.presence			= luup.variable_get(SID_VSWITCH,"STATUS",data.device_presence)
   	data.lock_windows		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_windows)
   	data.lock_blinds		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_blinds)
+  	data.lock_all			= luup.variable_get(SID_VSWITCH,"STATUS",data.lock_all)
   	
 	data.presence			= tonumber(data.presence)
 	data.status				= tonumber(data.status)
 	data.lock_windows		= tonumber(data.lock_windows)
 	data.lock_blinds		= tonumber(data.lock_blinds)
+	data.lock_all			= tonumber(data.lock_all)
+	
+	if data.lock_all then
+		data.lock_blinds = 1
+		data.lock_windows = 1
+	end
 	
 	return data
 end
@@ -505,10 +520,6 @@ function devices_search(search)
 	end
 	
 	return devices
-end
-
-function devices_sec_sensor() 
-	return devices_search({ ["class"] = "SecSensor" })
 end
 
 -- 
@@ -677,28 +688,33 @@ function run_automator()
 			set_if_changed(SID_SELF, "BlindStatus" .. device, 0, SELF)
 		end
 	end
+	--for index,device in pairs(devices_search({ ["class"] = "Windows" })) do
+	--	if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
+	--		set_if_changed(SID_SELF, "BlindStatus" .. device, 0, SELF)
+	--	end
+	--end
 	
-	
-	if data.status == STATUS.AWAY then
+	if data.lock_all == 0 then
+		if data.status == STATUS.AWAY then
+			
+			lights_random()
+			blinds_temperature()
+			windows_temperature()
+			
+		elseif data.status ==STATUS.VACATION then
 		
-		lights_random()
-		blinds_temperature()
-		windows_temperature()
+			lights_random()
+			
+		elseif data.status == STATUS.HOME then
 		
-	elseif data.status ==STATUS.VACATION then
-	
-		lights_random()
-		
-	elseif data.status == STATUS.HOME then
-	
-	 	--blinds_wakeup()
-		thermostats_auto()
-		blinds_temperature() -- ???
-		windows_temperature()
-		
+			thermostats_auto()
+			blinds_temperature() -- ???
+			windows_temperature()
+			
+		end
 	end
 	
-	luup.call_delay("run_automator", 60, "")
+	luup.call_delay("run_automator", 180, "")
 end
 
 function temperature_inside()
@@ -741,7 +757,7 @@ end
 
 function blinds_temperature()
 	local data 					= read_config()
-	if data.blinds_lock then
+	if data.lock_blinds == 1 then
 		return
 	end
 	
@@ -752,25 +768,30 @@ function blinds_temperature()
 	local devices_blinds		= devices_search({ ["class"] = "Blinds", ["location"] = "south" })
 	
 	local time = os.date('*t')
-	if (time.hour < 10 and time.hour > 14) then
+	if (time.hour < BLINDS_TIME_START or time.hour > BLINDS_TIME_END) then
 		if blinds_auto == 1 then
+			luup.log("[MyHome] Opening blinds (time)")
 			action = "open"
 		end
-	elseif (temperature_inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR") then
+	elseif (temperature_inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR" and weather_status.temperature >= TEMPERATURE.BLIND_OUTSIDE) then
 		if blinds_auto == 0 then
+			luup.log("[MyHome] Closing blinds (time & temperature)")
 			action = "close"
 		end
 	elseif (temperature_inside < (TEMPERATURE.MAX-1) or weather_status.condition ~= "FAIR") then
-		action = "open"
+		if blinds_auto == 1 then
+			luup.log("[MyHome] Opening blinds (temperature)")
+			action = "open"
+		end
 	end
 	
 	if action == "open" then
-		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
+		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
 		for index,device in pairs(devices_blinds) do
 			blind_partial(device)
 		end
 	elseif action == "close" then
-		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
+		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
 		for index,device in pairs(devices_blinds) do
 			blind_open(device)
 		end
@@ -779,10 +800,10 @@ end
 
 function blinds_wakeup()
 	local data = read_config()
-	local devices_blinds	= devices_search({ ["class"] = "Blinds" })
 	
 	if data.status == 0 and data.lock_blinds == 0 then
-		for index,device in pairs(devices_blinds) do
+		luup.log("[MyHome] Opening blinds (wakeup)")
+		for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
 			if device_attr(device,"wakeup") == true then
 				blind_open(device)
 			end
@@ -807,7 +828,7 @@ function lights_random()
 
 		local device 		= lights[math.random( #lights )]
 		local device_on		= math.floor(math.random(5))
-		local device_time 	= math.floor(math.random(100,900))
+		local device_time 	= math.floor(math.random(60,719))
 		
 		if (device_on == 1) then
 			luup.log("[MyHome] Turn random light on " .. device)
@@ -840,7 +861,7 @@ function windows_temperature()
 	
 	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WIND_SPEED_LIMIT then
 		action = "close"
-	elseif data.windows_lock == 0 then
+	elseif data.lock_windows == 0 then
 		-- check temperature and wind
 		if (inside_temperature >= TEMPERATURE.MAX and temperature_inside > (weather.temperature - 1) and windows_auto == 0) then
 			action = "open"
