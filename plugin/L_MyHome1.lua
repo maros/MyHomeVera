@@ -387,24 +387,25 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	local data 				= read_config()
 	local triggered_device 	= device_attr(lul_device,"trigger")
 	
-	
 	if triggered_device == nil then
 		luup.log("[MyHome] trigger nil")
 		return
 	end
 	
 	local status_key 		= "LightStatus" .. triggered_device
+	local light_status 		= luup.variable_get(SID_SELD,status_key,SELF)
 	local current_status 	= luup.variable_get(SID_SWITCHPOWER,"Status",triggered_device)
 	local luminosity 		= luup.variable_get(SID_LUMINSOITY,"CurrentLevel",device_search_single({ ["class"] = "LightSensor" }))
+	local daynight_status	= daynight_status()
 	luminosity 				= tonumber(luminosity)
 	current_status			= tonumber(current_status)
+	light_status			= tonumber(light_status)
 	lul_value_old			= tonumber(lul_value_old)
 	lul_value_new			= tonumber(lul_value_new)
 	
-	if (current_status == 0 and lul_value_old == 0 and lul_value_new == 1 and luminosity <= LUMINOSITY_LEVEL) then
+	if (current_status == 0 and lul_value_old == 0 and lul_value_new == 1 and luminosity <= LUMINOSITY_LEVEL and daynight_status == "night") then
 		light_on(triggered_device)
-	elseif (current_status == 1 and lul_value_old == 1 and lul_value_new == 0) then
-		luup.log("[MyHome] OFF")
+	elseif (current_status == 1 and lul_value_old == 1 and lul_value_new == 0 and light_status == 1) then
 		light_off(triggered_device)
 	end
 end
@@ -730,7 +731,6 @@ function temperature_inside()
 end
 
 function weather_status()
-	
 	local device_weather 		= device_search_single({ ["class"] = "Weather" })
 	local device_temperature 	= device_search_single({ ["class"] = "TempSensor", ["location"] = "outside" })
 	--local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
@@ -759,6 +759,21 @@ function weather_status()
 	
 	luup.log("[MyHome] Check weather is " .. weather.condition)
 	return weather
+end
+
+function daynight_status()
+	local sunset 		= luup.sunset()
+	local sunrise 		= luup.sunrise()
+	local now			= os.time()
+	sunset 				= sunset + 1800
+	sunrise 			= sunrise - 1800
+	local sunset_prev 	= sunset - (24 * 60 * 60)
+	
+	if sunrise < now or sunrise > sunset or sunset_prev > now then
+		return "day"
+	else
+		return "night"
+	end
 end
 
 function blinds_temperature()
@@ -831,7 +846,7 @@ function lights_random()
 	
     local time = os.date('*t')
 	-- DEBUG: if 1 then
-	if (luup.is_night() and time.hour >= 18 and time.hour <= 22) then
+	if (daynight_status() == "night" and time.hour >= 18 and time.hour <= 22) then
 
 		local device 		= lights[math.random( #lights )]
 		local device_on		= math.floor(math.random(5))
@@ -871,7 +886,7 @@ function windows_temperature()
 		action = "close"
 	elseif data.lock_windows == 0 then
 		-- check temperature and wind
-		if (inside_temperature >= TEMPERATURE.MAX and temperature_inside > (weather.temperature - 1) and windows_auto == 0) then
+		if (temperature_inside >= TEMPERATURE.MAX and temperature_inside > (weather_status.temperature - 1) and windows_auto == 0) then
 			action = "open"
 		elseif (windows_auto == 1 and temperature_inside < (TEMPERATURE.MAX-1)) then
 			action = "close"
