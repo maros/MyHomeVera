@@ -429,10 +429,10 @@ function read_config()
 	data.device_lock_blinds = tonumber(data.device_lock_blinds)
 	data.device_lock_all 	= tonumber(data.device_lock_all)
 
-  	data.presence			= luup.variable_get(SID_VSWITCH,"STATUS",data.device_presence)
-  	data.lock_windows		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_windows)
-  	data.lock_blinds		= luup.variable_get(SID_VSWITCH,"STATUS",data.device_lock_blinds)
-  	data.lock_all			= luup.variable_get(SID_VSWITCH,"STATUS",data.lock_all)
+  	data.presence			= luup.variable_get(SID_VSWITCH,"Status",data.device_presence)
+  	data.lock_windows		= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_windows)
+  	data.lock_blinds		= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_blinds)
+  	data.lock_all			= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_all)
   	
 	data.presence			= tonumber(data.presence)
 	data.status				= tonumber(data.status)
@@ -440,7 +440,7 @@ function read_config()
 	data.lock_blinds		= tonumber(data.lock_blinds)
 	data.lock_all			= tonumber(data.lock_all)
 	
-	if data.lock_all then
+	if data.lock_all == 1 then
 		data.lock_blinds = 1
 		data.lock_windows = 1
 	end
@@ -697,6 +697,8 @@ function run_automator()
 	--end
 	
 	if data.lock_all == 0 then
+		luup.log("[MyHome] Run automator actions")
+	
 		if data.status == STATUS.AWAY then
 			
 			lights_random()
@@ -714,6 +716,8 @@ function run_automator()
 			windows_temperature()
 			
 		end
+	else
+		luup.log("[MyHome] Skip automator actions" .. data.lock_all)
 	end
 	
 	luup.call_delay("run_automator", 180, "")
