@@ -393,7 +393,7 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	end
 	
 	local status_key 		= "LightStatus" .. triggered_device
-	local light_status 		= luup.variable_get(SID_SELD,status_key,SELF)
+	local light_status 		= read_or_init(SID_SELF,status_key,SELF,0)
 	local current_status 	= luup.variable_get(SID_SWITCHPOWER,"Status",triggered_device)
 	local luminosity 		= luup.variable_get(SID_LUMINSOITY,"CurrentLevel",device_search_single({ ["class"] = "LightSensor" }))
 	local daynight_status	= daynight_status()
