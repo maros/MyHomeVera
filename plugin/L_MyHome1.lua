@@ -18,7 +18,7 @@
 
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { target = 1}, 62)
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random",{}, 62)
---
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","blind_partial",{ device = 30, percentage = 80 },62)
 function Set(list)
 	local set = {}
   	for _, l in ipairs(list) do set[l] = true end
@@ -625,9 +625,9 @@ function blind_partial(device,percentage)
     end
     
     local blind_time = math.floor(( blind_position - percentage ) / 100 * TIMER.BLINDS)
-	percentage = math.floor(( 1 -( blind_time / TIMER.BLINDS)) * 100)
+	--percentage = math.floor(( 1 -( blind_time / TIMER.BLINDS)) * 100)
 	
-	if percentage ~= blind_position then
+	if blind_time ~= 0 and percentage ~= blind_position then
 	    luup.call_action(SID_DIMMING, "SetLoadLevelTarget", { newLoadlevelTarget = percentage }, device)
 	    luup.variable_set(SID_SELF, status_key, percentage, SELF)
 	
