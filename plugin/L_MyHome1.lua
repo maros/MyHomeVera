@@ -43,9 +43,10 @@ TIMER.ALARM						= 600	-- timer for alarm
 
 local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
-local LUMINOSITY_LEVEL			= 5
+local LUMINOSITY_LEVEL			= 4
 local BLINDS_TIME_START			= 10
 local BLINDS_TIME_END			= 15
+local SUNOFFSET					= 45 * 60
 
 local DEVICES 					= {
 	[20]							= {
@@ -390,6 +391,14 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	if triggered_device == nil then
 		luup.log("[MyHome] trigger nil")
 		return
+	end
+	
+	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
+		local lighton = luup.variable_get(SID_SWITCHPOWER,"Status",device)
+		lighton = tonumber(lighton)
+		if lighton == 1 then
+			return
+		end
 	end
 	
 	local status_key 		= "LightStatus" .. triggered_device
@@ -765,8 +774,8 @@ function daynight_status()
 	local sunset 		= luup.sunset()
 	local sunrise 		= luup.sunrise()
 	local now			= os.time()
-	sunset 				= sunset + 1800
-	sunrise 			= sunrise - 1800
+	sunset 				= sunset + SUNOFFSET
+	sunrise 			= sunrise - SUNOFFSET
 	local sunset_prev 	= sunset - (24 * 60 * 60)
 	
 	if sunrise < now or sunrise > sunset or sunset_prev > now then
