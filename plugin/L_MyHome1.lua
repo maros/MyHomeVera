@@ -138,6 +138,9 @@ local DEVICES 					= {
 --	[111]							= {
 --		["class"]					= "RainSensor",
 --	},
+	[80]							= {
+		["class"]						= "LockLights"
+	},
 --	[111]							= {
 --		["class"]					= "Window",
 --	},
@@ -388,8 +391,8 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	local data 				= read_config()
 	local triggered_device 	= device_attr(lul_device,"trigger")
 	
-	if triggered_device == nil then
-		luup.log("[MyHome] trigger nil")
+	if triggered_device == nil or data.lock_lights == 1 then
+		luup.log("[MyHome] Not triggering")
 		return
 	end
 	
@@ -412,6 +415,8 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	lul_value_old			= tonumber(lul_value_old)
 	lul_value_new			= tonumber(lul_value_new)
 	
+	-- TODO check if other devices were turned on in the same room
+	
 	if (current_status == 0 and lul_value_old == 0 and lul_value_new == 1 and luminosity <= LUMINOSITY_LEVEL and daynight_status == "night") then
 		light_on(triggered_device)
 	elseif (current_status == 1 and lul_value_old == 1 and lul_value_new == 0 and light_status == 1) then
@@ -432,6 +437,7 @@ function read_config()
   	data.device_presence	= device_search_single({ ["class"] = "Presence" })
   	data.device_lock_windows= device_search_single({ ["class"] = "LockWindows" })
   	data.device_lock_blinds	= device_search_single({ ["class"] = "LockBlinds" })
+  	data.device_lock_lights	= device_search_single({ ["class"] = "LockLights" })
   	data.device_lock_all	= device_search_single({ ["class"] = "LockAll" })
   	
 	data.device_presence	= tonumber(data.device_presence)
@@ -442,17 +448,20 @@ function read_config()
   	data.presence			= luup.variable_get(SID_VSWITCH,"Status",data.device_presence)
   	data.lock_windows		= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_windows)
   	data.lock_blinds		= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_blinds)
+  	data.lock_lights		= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_lights)
   	data.lock_all			= luup.variable_get(SID_VSWITCH,"Status",data.device_lock_all)
   	
 	data.presence			= tonumber(data.presence)
 	data.status				= tonumber(data.status)
 	data.lock_windows		= tonumber(data.lock_windows)
+	data.lock_lights		= tonumber(data.lock_lights)
 	data.lock_blinds		= tonumber(data.lock_blinds)
 	data.lock_all			= tonumber(data.lock_all)
 	
 	if data.lock_all == 1 then
 		data.lock_blinds = 1
 		data.lock_windows = 1
+		data.lock_lights = 1
 	end
 	
 	return data
@@ -844,6 +853,11 @@ end
 
 function lights_random()
 	local lights = devices_search({ ["device_type"] = DID_LIGHT })
+	local data = read_config()
+	
+	if data.lock_lights == 1 then
+		return
+	end
 	
 	-- Get lights and return if some light is already running
 	for index,device in pairs(lights) do
