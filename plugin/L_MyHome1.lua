@@ -19,6 +19,7 @@
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { target = 1}, 62)
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random",{}, 62)
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","blind_partial",{ device = 30, percentage = 80 },62)
+
 function Set(list)
 	local set = {}
   	for _, l in ipairs(list) do set[l] = true end
@@ -134,10 +135,14 @@ local DEVICES 					= {
 	},
 	[76]							= {
 		["class"]						= "LockAll"
-	}
---	[111]							= {
---		["class"]					= "RainSensor",
---	},
+	},
+	[78]							= {
+		["class"]						= "RainSensor"
+	},
+	[79]							= {
+		["class"]						= "SecSensor",
+		["immediate"]					= true
+	},
 	[80]							= {
 		["class"]						= "LockLights"
 	},
