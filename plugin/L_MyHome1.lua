@@ -164,8 +164,8 @@ local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
 local DID_WINDOWCOVERING		= "urn:schemas-micasaverde-com:device:WindowCovering:1"
 
 local TEMPERATURE				= {}
-TEMPERATURE.BLIND_OUTSIDE		= 21	
-TEMPERATURE.MAX					= 24
+TEMPERATURE.BLIND_OUTSIDE		= 20	
+TEMPERATURE.MAX					= 25
 TEMPERATURE.VACATION			= 15
 TEMPERATURE.LOW					= 18
 TEMPERATURE.DEFAULT				= 20
@@ -929,7 +929,7 @@ function windows_close()
     luup.log("[MyHome] Closing all windows")
 
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
-		-- TODO
+		blind_close(device)
 	end
 end
 
@@ -937,7 +937,7 @@ function windows_open()
 	luup.log("[MyHome] Opening all windows")
 	
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
-		-- TODO
+		blind_open(device)
 	end
 end
 
