@@ -177,9 +177,9 @@ TEMPERATURE.LOW					= 18
 TEMPERATURE.DEFAULT				= 20
 
 local WEATHER					= {}
-WEATHER.POOR					= Set { "chanceflurries", "chancerain", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
-WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "partlycloudy" }
-WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny" }
+WEATHER.POOR					= Set { "chanceflurries", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
+WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "chancerain" }
+WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny", "partlycloudy" }
 
 -- 
 -- FUNCTION
@@ -219,8 +219,9 @@ function initialize(lul_device)
   	-- luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, data.device_presence)
   	-- luup.variable_watch("watch_presence", SID_VSWITCH, nil, data.device_presence)
 	-- TODO: Close windows on rain
-	-- luup.variable_watch("windows_close", SID_SECURITYSENSOR, "Tripped", device_search_single({ ["class"] = "RainSensor" }))
+	luup.variable_watch("windows_close", SID_SECURITYSENSOR, "Tripped", device_search_single({ ["class"] = "RainSensor" }))
 	
+	-- Re-start countdown
 	tick()
 	
 	run_automator()
@@ -764,7 +765,7 @@ end
 function weather_status()
 	local device_weather 		= device_search_single({ ["class"] = "Weather" })
 	local device_temperature 	= device_search_single({ ["class"] = "TempSensor", ["location"] = "outside" })
-	--local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
+	local device_rain 			= device_search_single({ ["class"] = "RainSensor" })
 	
 	local weather = {}
 	weather.condition 	= "POOR"
@@ -773,7 +774,7 @@ function weather_status()
 	weather.temperature = tonumber(weather.temperature)
 	weather.wind_speed 	= luup.variable_get(SID_WEATHER,"WindSpeed",device_weather)
 	weather.wind_speed  = tonumber(weather.wind_speed)
-	-- weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",device_rain)
+	weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",device_rain)
 	
 	local condition = luup.variable_get(SID_WEATHER,"ConditionGroup",device_weather)
 	
@@ -784,9 +785,9 @@ function weather_status()
 	end
 	
 	-- TODO
-	--if weather.condition == "POOR" or weather.rain_sensor == true then
-	--	weather.rain = true
-	--end
+	if weather.condition == "POOR" or weather.rain_sensor == true then
+		weather.rain = true
+	end
 	
 	luup.log("[MyHome] Check weather is " .. weather.condition)
 	return weather
@@ -819,6 +820,8 @@ function blinds_temperature()
 	local blinds_auto 			= read_or_init(SID_SELF,"BlindStatusAuto",SELF, 0)
 	local action 				= "keep"
 	local devices_blinds		= devices_search({ ["class"] = "Blinds", ["location"] = "south" })
+	
+	blinds_auto 				= tonumber(blinds_auto)
 	
 	local time = os.date('*t')
 	if (time.hour < BLINDS_TIME_START or time.hour > BLINDS_TIME_END) then
