@@ -42,6 +42,7 @@ TIMER.AWAY						= 300 	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
 TIMER.ALARM						= 600	-- timer for alarm
 
+local ALARM_SERVER				= 'http:://alarm.k-1.com'
 local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
 local LUMINOSITY_LEVEL			= 4
@@ -248,6 +249,9 @@ function set_status_home(lul_device)
 		-- Cancel timer
 		cancel_timer()
 		
+		-- Disarm remote alarm
+		remote_call('reset')
+		
 		-- Disarm sensors immediately
 	  	for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
 			luup.call_action(SID_SECURITYSENSOR, "SetArmed", {newArmedValue = 0}, device)
@@ -294,6 +298,8 @@ end
 function run_intrusion()
 	luup.log("[MyHome] Intrusion was detected")
 	start_timer(TIMER.INTRUSION,"run_alarm")
+	
+	remote_call('intrusion')
 	
 	-- TODO: Arm remote alarm manager
 end
@@ -376,6 +382,8 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 		    		-- Check Immediate Alarm 
 	    			if device_attr(device,"immediate") == true then
 	    				run_alarm(SELF, lul_settings)
+						-- Call alarm
+						remote_call('run')
 	    				return
 	    			end
 			  		armed_tripped = armed_tripped + 1
@@ -953,3 +961,27 @@ end
 function thermostats_auto(temperature)
 	-- TODO
 end
+
+function remote_call(action)
+	local http = require("socket.http")
+	http.TIMEOUT = 10
+ 
+ 	local url 		= "https://".ALARM_SERVER."/alarm/" .. action .. "?action=RecordStart&camID=1"
+ 	local signature = '';
+ 
+ 	luup.log("[MyHome] Calling remote alarm " .. action)
+ 
+  	-- The return parameters are in a different order from luup.inet.wget(...)
+	result, status = http.request{
+	 	url		= url,
+	 	method	= 'POST',
+	 	headers	= { 
+	 		"X-HomelyAlarm-Signature" = signature 
+ 		}
+	 }
+	 
+	 if (status != 200) then
+		luup.log("[MyHome] Failed remote alarm " .. action .. " (" .. status .. ") : " .. resukl)	 	
+	 end
+end
+
