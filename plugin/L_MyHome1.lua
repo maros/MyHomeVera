@@ -842,15 +842,15 @@ function blinds_temperature()
 	end
 	
 	if action == "open" then
-		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
-		for index,device in pairs(devices_blinds) do
-			blind_partial(device)
-		end
-	elseif action == "close" then
-		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
 		for index,device in pairs(devices_blinds) do
 			blind_open(device)
 		end
+		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
+	elseif action == "close" then
+		for index,device in pairs(devices_blinds) do
+			blind_partial(device)
+		end
+		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
 	end
 end
 
