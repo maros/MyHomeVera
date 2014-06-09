@@ -42,6 +42,7 @@ TIMER.AWAY						= 300 	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
 TIMER.ALARM						= 600	-- timer for alarm
 
+local ALARM_SECRET				= 'TODO CHANGE'
 local ALARM_SERVER				= 'http:://alarm.k-1.com'
 local WIND_SPEED_LIMIT			= 5
 local BLINDS_PARTIAL			= 20
@@ -251,7 +252,7 @@ function set_status_home(lul_device)
 		cancel_timer()
 		
 		-- Disarm remote alarm
-		remote_call('reset')
+		remote_call('reset',{ message = 'Somebody came home' })
 		
 		-- Disarm sensors immediately
 	  	for index,device in pairs(devices_search({ ["class"] = "SecSensor" })) do
@@ -270,8 +271,6 @@ function set_status_away(lul_device)
 		
 		-- Turn all lights off
 		lights_set(0)
-		
-		-- TODO: Disarm remote alarm manager
 		
 		start_timer(TIMER.AWAY,'run_away')
 	end
@@ -296,22 +295,19 @@ function set_status_vacation(lul_device)
 end
 
 -- Intrusion detected
-function run_intrusion()
+function run_intrusion(lul_device,message)
 	luup.log("[MyHome] Intrusion was detected")
+	luup.variable_set(SID_SELF, "AlarmMessage", message, SELF)
 	start_timer(TIMER.INTRUSION,"run_alarm")
-	
-	remote_call('intrusion')
-	
-	-- TODO: Arm remote alarm manager
+	remote_call('intrusion',{ message = message, timer = TIMER.INTRUSION })	
 end
 
 -- Run delayed alarm
-function run_alarm()
+function run_alarm(lul_device)
 	luup.log("[MyHome] ALARM!!!")
 	-- TODO: Send messages
 	-- TODO: Play sound
 	-- TODO: Run sirens
-	-- TODO: Notify remote alarm manager
 	
 	-- Turn all lights on
 	lights_set(1)
@@ -330,7 +326,7 @@ function run_reset()
 	luup.log("[MyHome] Reset alarm")
 	
 	-- TODO: Stop sirens
-	-- TODO: Disarm remote alarm manager
+	
 	lights_set(0)
 	
 	set_status_away(SELF)
@@ -359,6 +355,7 @@ function set_status(new_status)
 		luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = presence }, data.device_presence)
 		luup.call_action(SID_VSWITCH, "SetTarget", { newTargetValue = presence }, data.device_presence)
 		
+		luup.variable_set(SID_SELF,"AlarmMessage","", SELF)
    		luup.variable_set(SID_SELF, "Status", new_status, SELF)
    		return true
    	end
@@ -369,7 +366,8 @@ end
 function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
 	luup.log("[MyHome] Watched alarm variable changed: " .. lul_device .. " " .. lul_service .. " " .. lul_variable .. " from " .. lul_value_old .. " to " .. lul_value_new)
 
-	local data 				= read_config()
+	local data 			= read_config()
+	local alarm_message	= ""
 
 	if (data.status >= 0 and data.status < STATUS.INTRUSION) then
 	  	luup.log("[MyHome] Callback data.status=" .. data.status , 100)
@@ -380,21 +378,23 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 		  	if sensor_tripped == "1" then
 		    	local sensor_armed = luup.variable_get(SID_SECURITYSENSOR,"Armed", device)
 		    	if sensor_armed == "1" then
+			    	local message = 'Sensor '.. luup.devices[device].name .. ' tripped'
 		    		-- Check Immediate Alarm 
 	    			if device_attr(device,"immediate") == true then
 	    				run_alarm(SELF, lul_settings)
 						-- Call alarm
-						remote_call('run')
+						remote_call('run',{ message: message })
 	    				return
+	    			else
+	    				alarm_message = alarm_message .. message .. ","
 	    			end
 			  		armed_tripped = armed_tripped + 1
-			  		
-			  		-- TODO: Turn on lights in same room if luminosity low
 				end
 		  	end
 		end
 		if armed_tripped > 0 then
-		  	run_intrusion(SELF, lul_settings)
+			luup.variable_set(SID_SELF,"AlarmMessage",alarm_message, SELF)
+		  	run_intrusion(SELF, alarm_message)
 		end
 	end
 end
@@ -965,16 +965,18 @@ function thermostats_auto(temperature)
 	-- TODO
 end
 
-function remote_call(action)
-	local http = require("socket.http")
-	http.TIMEOUT = 10
- 
- 	local url 		= "https://".ALARM_SERVER."/alarm/" .. action .. "?action=RecordStart&camID=1"
- 	local signature = '';
+function remote_call(action,params)
+	local http 		= require("socket.http")
+	local sha1 		= require("sha1")
+	http.TIMEOUT 	= 10
+ 	--message			= urlencode(message)
+ 	
+ 	-- TODO handle params
+ 	local url 		= "https://".ALARM_SERVER."/alarm/" .. action .. "?message=" .. message .. "&time=" .. os.time()
+ 	local signature = sha1.hmac_sha1(ALARM_SECRET,url);
  
  	luup.log("[MyHome] Calling remote alarm " .. action)
  
-  	-- The return parameters are in a different order from luup.inet.wget(...)
 	result, status = http.request{
 	 	url		= url,
 	 	method	= 'POST',
