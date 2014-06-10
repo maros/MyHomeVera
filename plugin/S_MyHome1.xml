@@ -59,7 +59,7 @@
       </argumentList>
     </action>
     <action>
-      <name>device_partial</name>
+      <name>device_move</name>
       <argumentList>        
         <argument>
           <name>device</name>

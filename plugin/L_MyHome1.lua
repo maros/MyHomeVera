@@ -18,7 +18,7 @@
 
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { target = 1}, 62)
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random",{}, 62)
--- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","device_partial",{ device = 30, percentage = 80 },62)
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","device_move",{ device = 30, percentage = 80 },62)
 
 function Set(list)
 	local set = {}
@@ -685,15 +685,15 @@ end
 
 function device_open(device) 
 	device = tonumber(device)
-	device_partial(100)
+	device_move(100)
 end
 
 function device_close(device)
 	device = tonumber(device)
-	device_partial(0)
+	device_move(0)
 end
 
-function device_partial(device,percentage)
+function device_move(device,percentage)
 	device		= tonumber(device)
 	percentage	= tonumber(percentage)
 	
@@ -897,7 +897,7 @@ function blinds_temperature(location)
 		luup.variable_set(SID_SELF,blinds_auto_key,0,SELF)
 	elseif action == "close" then
 		for index,device in pairs(devices_blinds) do
-			device_partial(device,BLINDS.PARTIAL)
+			device_move(device,BLINDS.PARTIAL)
 		end
 		luup.variable_set(SID_SELF,blinds_auto_key,1,SELF)
 	end
@@ -933,7 +933,6 @@ function lights_random()
 	end
 	
 	local time = os.date('*t')
-	-- DEBUG: if 1 then
 	if (daynight_status() == "night" and time.hour >= 18 and time.hour <= 22) then
 
 		local device		= lights[math.random( #lights )]

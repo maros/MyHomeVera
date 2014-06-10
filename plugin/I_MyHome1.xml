@@ -25,23 +25,13 @@
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>device_partial</name>
+      <name>device_move</name>
       <run>return device_partial(lul_settings.device,lul_settings.percentage)</run>
-    </action>
-    <action>
-      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>device_open</name>
-      <run>return device_open(lul_settings.device)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>blinds_wakeup</name>
       <run>return blinds_wakeup()</run>
-    </action>
-    <action>
-      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
-      <name>lights_set</name>
-      <run>return lights_set(lul_settings.target)</run>
     </action>
   </actionList>
 </implementation>
