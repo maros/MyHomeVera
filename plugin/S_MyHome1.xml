@@ -50,21 +50,6 @@
       </argumentList>
     </action>
     <action>
-      <name>lights_random</name>
-      <argumentList>
-      </argumentList>
-    </action>
-    <action>
-      <name>blinds_temperature</name>
-      <argumentList>
-      </argumentList>
-    </action>
-    <action>
-      <name>windows_temperature</name>
-      <argumentList>
-      </argumentList>
-    </action>
-    <action>
       <name>lights_set</name>
       <argumentList>
         <argument>
@@ -74,7 +59,7 @@
       </argumentList>
     </action>
     <action>
-      <name>blind_partial</name>
+      <name>device_partial</name>
       <argumentList>        
         <argument>
           <name>device</name>
@@ -82,15 +67,6 @@
         </argument>
         <argument>
           <name>percentage</name>
-          <direction>in</direction>
-        </argument>
-      </argumentList>
-    </action>
-    <action>
-      <name>blind_open</name>
-      <argumentList>
-        <argument>
-          <name>device</name>
           <direction>in</direction>
         </argument>
       </argumentList>
