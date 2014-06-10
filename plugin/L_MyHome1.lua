@@ -18,7 +18,7 @@
 
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_set", { target = 1}, 62)
 -- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1", "lights_random",{}, 62)
--- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","blind_partial",{ device = 30, percentage = 80 },62)
+-- luup.call_action("urn:upnp-k1-com:serviceId:MyHome1","device_partial",{ device = 30, percentage = 80 },62)
 
 function Set(list)
 	local set = {}
@@ -37,6 +37,7 @@ STATUS.INTRUSION				= 90
 STATUS.ALARM					= 100
 
 local TIMER						= {}
+TIMER.WINDOWS					= 30
 TIMER.BLINDS					= 17	-- timer for blinds to move fully up/down
 TIMER.AWAY						= 300	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
@@ -98,53 +99,65 @@ local DEVICES					= {
 	},
 	[21]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[22]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[23]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[24]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[28]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[29]							= {
 		["class"]						= "Blinds",
-		["location"]					= "south"
+		["location"]					= "south",
+		["timer"]						= TIMER.BLINDS
 	},
 	[32]							= {
 		["class"]						= "Blinds",
-		["location"]					= "north"
+		["location"]					= "north",
+		["timer"]						= TIMER.BLINDS
 	},
 	[33]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
-		["wakeup"]						= true
+		["wakeup"]						= true,
+		["timer"]						= TIMER.BLINDS
 	},
 	[26]							= {
 		["class"]						= "Blinds",
-		["location"]					= "north"
+		["location"]					= "north",
+		["timer"]						= TIMER.BLINDS
 	},
 	[30]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
-		["window"]						= 81
+		["related"]						= 81,
+		["timer"]						= TIMER.BLINDS
 	},
 	[25]							= {
 		["class"]						= "Blinds",
-		["location"]					= "north"
+		["location"]					= "north",
+		["timer"]						= TIMER.BLINDS
 	},
 	[31]							= {
 		["class"]						= "Blinds",
-		["location"]					= "north"
+		["location"]					= "north",
+		["timer"]						= TIMER.BLINDS
 	},
 	[73]							= {
 		["class"]						= "Presence"
@@ -158,19 +171,20 @@ local DEVICES					= {
 	[76]							= {
 		["class"]						= "LockAll"
 	},
-	[78]							= {
+	[83]							= {
 		["class"]						= "RainSensor"
 	},
-	[79]							= {
-		["class"]						= "SecSensor",
-		["immediate"]					= true
-	},
+--	[84]							= {
+--		["class"]						= "SecSensor",
+--		["immediate"]					= true
+--	},
 	[80]							= {
 		["class"]						= "LockLights"
 	},
 	[81]							= {
 		["class"]						= "Window",
-		["blind"]						= 30
+		["related"]						= 30,
+		["timer"]						= TIMER.WINDOWS
 --	},
 --	[82]							= {
 --		["class"]						= "Window",
@@ -315,8 +329,6 @@ end
 -- Run delayed alarm
 function run_alarm(lul_device)
 	luup.log("[MyHome] ALARM!!!")
-	-- TODO: Send messages
-	-- TODO: Play sound
 	-- TODO: Run sirens
 	
 	-- Turn all lights on
@@ -393,7 +405,7 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 					if device_attr(device,"immediate") == true then
 						run_alarm(SELF, lul_settings)
 						-- Call alarm
-						remote_call('run',{ message: message })
+						remote_call("run",{ message = message })
 						return
 					else
 						alarm_message = alarm_message .. message .. ","
@@ -440,9 +452,9 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 	lul_value_new			= tonumber(lul_value_new)
 	
 	if (current_status == 0 and lul_value_old == 0 and lul_value_new == 1 and luminosity <= LUMINOSITY_LEVEL and daynight_status == "night") then
-		light_on(triggered_device)
+		device_on(triggered_device)
 	elseif (current_status == 1 and lul_value_old == 1 and lul_value_new == 0 and light_status == 1) then
-		light_off(triggered_device)
+		device_off(triggered_device)
 	end
 end
 
@@ -642,75 +654,96 @@ end
 -- Various device functions
 --
 
-function blind_partial(device,percentage)
-	device = tonumber(device)
-	if percentage == nil then
-		percentage = BLINDS.PARTIAL
-	end
-	percentage = tonumber(percentage)
+function device_position_get(device)
+	device					= tonumber(device)
+	local position_key		= "DevicePosition" .. device
+	local position_service	= luup.variable_get(SID_SELF,status_key,SELF)
+	local position_device	= luup.variable_get(SID_DIMMING,"LoadLevelStatus",device)
+	position_service		= tonumber(position_service)
+	position_device			= tonumber(position_device)
 	
-	local window
-	
-	if 
-
-	luup.log("[MyHome] Moving blind " .. device .. " to " .. percentage .. "%")
-	
-	local status_key = "BlindStatus" .. device
-	
-	local blind_position_device		= luup.variable_get(SID_DIMMING,"LoadLevelStatus",device)
-	blind_position_device			= tonumber(blind_position_device)
-	local blind_position_service	= read_or_init(SID_SELF,status_key,SELF, blind_position_device)
-	blind_position_service			= tonumber(blind_position_service)
-	local blind_position			= blind_position_service
-	
-	if (blind_position_device == 0 and blind_position_service ~= 0) then
-		blind_position = 0
-		luup.variable_set(SID_SELF, status_key, 0, SELF)
+	if (position_device == 0 and position_device ~= 0) then
+		position_device = 0
+		luup.variable_set(SID_SELF, position_key, 0, SELF)
 	end
 	
-	local blind_time = math.floor(( blind_position - percentage ) / 100 * TIMER.BLINDS)
-	--percentage = math.floor(( 1 -( blind_time / TIMER.BLINDS)) * 100)
-	
-	if blind_time ~= 0 and percentage ~= blind_position then
-		luup.call_action(SID_DIMMING, "SetLoadLevelTarget", { newLoadlevelTarget = percentage }, device)
-		luup.variable_set(SID_SELF, status_key, percentage, SELF)
-	
-		if blind_time < 0 then
-			blind_time = blind_time * -1
-			luup.call_action(SID_WINDOWCOVERING, "Up", {}, device)
-		elseif blind_time > 0 then
-			luup.call_action(SID_WINDOWCOVERING, "Down", {}, device)
-		end
-	
-		luup.call_delay("blind_stop", blind_time, tostring(device))
-	end
+	return position_device
 end
 
-function blind_stop(device) 
+function device_position_set(device,percentage)
+	device		= tonumber(device)
+	percentage	= tonumber(percentage)
+	luup.call_action(SID_DIMMING, "SetLoadLevelTarget", { newLoadlevelTarget = percentage }, device)
+	luup.variable_set(SID_SELF, "DevicePosition" .. device, percentage, SELF)
+end
+
+function device_stop(device) 
 	device = tonumber(device)
-	luup.log("[MyHome] Stoping blind " .. device)
+	luup.log("[MyHome] Stoping device " .. device)
 	luup.call_action(SID_WINDOWCOVERING, "Stop", {}, device)
 end
 
-function blind_open(device) 
+function device_open(device) 
 	device = tonumber(device)
-	luup.log("[MyHome] Opening blind " .. device)
-	luup.call_action(SID_DIMMING, "SetLoadLevelTarget", { newLoadlevelTarget = 100 }, device)
-	luup.variable_set(SID_SELF, "BlindStatus" .. device, 100, SELF)
+	device_partial(100)
 end
 
-function light_off(device)
+function device_close(device)
+	device = tonumber(device)
+	device_partial(0)
+end
+
+function device_partial(device,percentage)
+	device		= tonumber(device)
+	percentage	= tonumber(percentage)
+	
+	-- Check related device
+	local related = device_attr(device,"related")
+	-- window 0-50 - blind 0-100
+	-- window 50-100 - blind max 50-100
+	--if related != nil then 
+	--	local related_position = device_position_get(related)
+	--	if related_position > 50 and percentage < 60 then
+	--		percentage = 60
+	--	end
+	--end
+
+	luup.log("[MyHome] Moving device " .. device .. " to " .. percentage .. "%")
+	
+	if (percentage == 100 or percentage == 0) then
+		device_position_set(device,percentage)
+	else
+		local blind_position	= device_position_get(device)
+		local blind_time		= math.floor(( blind_position - percentage ) / 100 * TIMER.BLINDS)
+		--percentage			= math.floor(( 1 -( blind_time / TIMER.BLINDS)) * 100)
+		
+		if blind_time ~= 0 and percentage ~= blind_position then
+			device_position_set(device,percentage)
+		
+			if blind_time < 0 then
+				blind_time = blind_time * -1
+				luup.call_action(SID_WINDOWCOVERING, "Up", {}, device)
+			elseif blind_time > 0 then
+				luup.call_action(SID_WINDOWCOVERING, "Down", {}, device)
+			end
+		
+			luup.call_delay("device_stop", blind_time, tostring(device))
+		end
+	end
+end
+
+function device_off(device)
 	device = tonumber(device)
 	luup.log("[MyHome] Turn light off " .. device)
 	luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 0 }, device)
-	luup.variable_set(SID_SELF, "LightStatus" .. device, 0, SELF)
+	luup.variable_set(SID_SELF, "DeviceStatus" .. device, 0, SELF)
 end
 
-function light_on(device)
+function device_on(device)
 	device = tonumber(device)
 	luup.log("[MyHome] Turn light on " .. device)
 	luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, device)
-	luup.variable_set(SID_SELF, "LightStatus" .. device, 1, SELF)
+	luup.variable_set(SID_SELF, "DeviceStatus" .. device, 1, SELF)
 end
 
 -- 
@@ -727,17 +760,17 @@ function run_automator()
 	-- Check status
 	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
 		if luup.variable_get(SID_SWITCHPOWER,"Status",device) == 0 then
-			set_if_changed(SID_SELF, "LightStatus" .. device, 0, SELF)
+			set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
 		end
 	end
 	for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
 		if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
-			set_if_changed(SID_SELF, "BlindStatus" .. device, 0, SELF)
+			set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
 		end
 	end
 	--for index,device in pairs(devices_search({ ["class"] = "Windows" })) do
 	--	if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
-	--		set_if_changed(SID_SELF, "BlindStatus" .. device, 0, SELF)
+	--		set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
 	--	end
 	--end
 	
@@ -824,20 +857,20 @@ function daynight_status()
 end
 
 function blinds_temperature(location)
-	local data					= read_config()
+	local data = read_config()
+	
 	if data.lock_blinds == 1 then
 		luup.log("[MyHome] Blinds locked")
 		return
 	end
 	
-	local blinds_auto_key		= "BlindStatusAuto"..location
 	local temperature_inside	= temperature_inside()
 	local weather_status		= weather_status()
-	local blinds_auto			= read_or_init(SID_SELF,blinds_auto_key,SELF, 0)
+	local blinds_auto_key		= "BlindStatusAuto"..location
 	local action				= "keep"
 	local devices_blinds		= devices_search({ ["class"] = "Blinds", ["location"] = location })
-	
-	blinds_auto				= tonumber(blinds_auto)
+	local blinds_auto			= read_or_init(SID_SELF,blinds_auto_key,SELF, 0)
+	blinds_auto					= tonumber(blinds_auto)
 	
 	local time = os.date('*t')
 	if (time.hour < BLINDS.LOCATION[location].START or time.hour > BLINDS.LOCATION[location].END) then
@@ -859,12 +892,12 @@ function blinds_temperature(location)
 	
 	if action == "open" then
 		for index,device in pairs(devices_blinds) do
-			blind_open(device)
+			device_open(device)
 		end
 		luup.variable_set(SID_SELF,blinds_auto_key,0,SELF)
 	elseif action == "close" then
 		for index,device in pairs(devices_blinds) do
-			blind_partial(device)
+			device_partial(device,BLINDS.PARTIAL)
 		end
 		luup.variable_set(SID_SELF,blinds_auto_key,1,SELF)
 	end
@@ -877,7 +910,7 @@ function blinds_wakeup()
 		luup.log("[MyHome] Opening blinds (wakeup)")
 		for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
 			if device_attr(device,"wakeup") == true then
-				blind_open(device)
+				device_open(device)
 			end
 		end
 	end
@@ -895,7 +928,7 @@ function lights_random()
 	for index,device in pairs(lights) do
 		local light_status = luup.variable_get(SID_SWITCHPOWER,"Status",device)
 		if tonumber(light_status) == 1 then
-			return			
+			return
 		end
 	end
 	
@@ -909,8 +942,8 @@ function lights_random()
 		
 		if (device_on == 1) then
 			luup.log("[MyHome] Turn random light on " .. device)
-			light_on(device)
-			luup.call_delay("light_off", device_time, device)
+			device_on(device)
+			luup.call_delay("device_off", device_time, device)
 		end
 	else
 		lights_set(0)
@@ -923,9 +956,9 @@ function lights_set(target)
 	luup.log("[MyHome] Set all light to " .. target)
 	for index,device in pairs(devices_search({ ["device_type"] = DID_LIGHT })) do
 		if target == 1 then
-			light_on(device)
+			device_on(device)
 		elseif target == 0 then
-			light_off(device)
+			device_off(device)
 		end
 	end
 end
@@ -961,7 +994,7 @@ function windows_close()
 	luup.log("[MyHome] Closing all windows")
 
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
-		blind_close(device)
+		device_close(device)
 	end
 end
 
@@ -969,7 +1002,7 @@ function windows_open()
 	luup.log("[MyHome] Opening all windows")
 	
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
-		blind_open(device)
+		device_open(device)
 	end
 end
 
@@ -982,27 +1015,27 @@ function thermostats_auto(temperature)
 end
 
 function remote_call(action,params)
-	local http		= require("socket.http")
-	local sha1		= require("sha1")
-	http.TIMEOUT	= 10
-	--message			= urlencode(message)
-	
-	-- TODO handle params
-	local url		= "https://".ALARM_SERVER."/alarm/" .. action .. "?message=" .. message .. "&time=" .. os.time()
-	local signature = sha1.hmac_sha1(ALARM_SECRET,url);
-
-	luup.log("[MyHome] Calling remote alarm " .. action)
-
-	result, status = http.request{
-		url		= url,
-		method	= 'POST',
-		headers	= { 
-			"X-HomelyAlarm-Signature" = signature 
-		}
-	}
-	
-	if (status != 200) then
-		luup.log("[MyHome] Failed remote alarm " .. action .. " (" .. status .. ") : " .. resukl)	 	
-	end
+--	local http		= require("socket.http")
+--	local sha1		= require("sha1")
+--	http.TIMEOUT	= 10
+--	--message			= urlencode(message)
+--	
+--	-- TODO handle params
+--	local url		= "https://" .. ALARM_SERVER .. "/alarm/" .. action .. "?message=" .. message .. "&time=" .. os.time()
+--	local signature = sha1.hmac_sha1(ALARM_SECRET,url)
+--
+--	luup.log("[MyHome] Calling remote alarm " .. action)
+--
+--	local result, status = http.request{
+--		url		= url,
+--		method	= 'POST',
+--		headers	= {
+--			["X-HomelyAlarm-Signature"] = signature
+--		}
+--	}
+--	
+--	if status != 200 then
+--		luup.log("[MyHome] Failed remote alarm " .. action .. " (" .. status .. ") : " .. result)
+--	end
 end
 
