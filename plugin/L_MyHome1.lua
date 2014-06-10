@@ -42,13 +42,32 @@ TIMER.AWAY						= 300 	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
 TIMER.ALARM						= 600	-- timer for alarm
 
+local BLINDS					= {}
+BLINDS.PARTIAL					= 20
+BLINDS.TEMPERATURE_OUTSIDE		= 22
+BLINDS.LOCATION					= {}
+BLINDS.LOCATION.south			= {}
+BLINDS.LOCATION.south.START		= 10
+BLINDS.LOCATION.south.END		= 15
+BLINDS.LOCATION.livingroom		= {}
+BLINDS.LOCATION.livingroom.START= 18
+BLINDS.LOCATION.livingroom.END	= 20
+
+local TEMPERATURE				= {}
+TEMPERATURE.MAX					= 25
+TEMPERATURE.VACATION			= 15
+TEMPERATURE.LOW					= 18
+TEMPERATURE.DEFAULT				= 20
+
+local WEATHER					= {}
+WEATHER.POOR					= Set { "chanceflurries", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
+WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "chancerain" }
+WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny", "partlycloudy" }
+
 local ALARM_SECRET				= 'TODO CHANGE'
 local ALARM_SERVER				= 'http:://alarm.k-1.com'
 local WIND_SPEED_LIMIT			= 5
-local BLINDS_PARTIAL			= 20
 local LUMINOSITY_LEVEL			= 4
-local BLINDS_TIME_START			= 10
-local BLINDS_TIME_END			= 15
 local SUNOFFSET					= 45 * 60
 
 local DEVICES 					= {
@@ -116,7 +135,8 @@ local DEVICES 					= {
 	},
 	[30]							= {
 		["class"]						= "Blinds",
-		["location"]					= "north"
+		["location"]					= "north",
+		["window"]						= 81
 	},
 	[25]							= {
 		["class"]						= "Blinds",
@@ -148,12 +168,13 @@ local DEVICES 					= {
 	[80]							= {
 		["class"]						= "LockLights"
 	},
---	[111]							= {
---		["class"]					= "Window",
+	[81]							= {
+		["class"]						= "Window",
+		["blind"]						= 30
 --	},
---	[111]							= {
---		["class"]					= "RainSensor",
---	}
+--	[82]							= {
+--		["class"]						= "Window",
+	}
 }
 
 local SID_SELF					= "urn:upnp-k1-com:serviceId:MyHome1"
@@ -169,18 +190,6 @@ local SID_LUMINSOITY			= "urn:micasaverde-com:serviceId:LightSensor1"
 local DID_LIGHT					= "urn:schemas-upnp-org:device:BinaryLight:1"
 local DID_DOORSENSOR			= "urn:schemas-micasaverde-com:device:DoorSensor:1"
 local DID_WINDOWCOVERING		= "urn:schemas-micasaverde-com:device:WindowCovering:1"
-
-local TEMPERATURE				= {}
-TEMPERATURE.BLIND_OUTSIDE		= 20	
-TEMPERATURE.MAX					= 25
-TEMPERATURE.VACATION			= 15
-TEMPERATURE.LOW					= 18
-TEMPERATURE.DEFAULT				= 20
-
-local WEATHER					= {}
-WEATHER.POOR					= Set { "chanceflurries", "chancesleet", "chancesnow", "chancetstorms", "flurries","sleet","rain","snow","tstorms","unknown" }
-WEATHER.NEUTRAL					= Set { "cloudy", "fog", "mostlycloudy", "chancerain" }
-WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny", "partlycloudy" }
 
 -- 
 -- FUNCTION
@@ -637,7 +646,7 @@ end
 function blind_partial(device,percentage)
 	device = tonumber(device)
 	if percentage == nil then
-		percentage = BLINDS_PARTIAL
+		percentage = BLINDS.PARTIAL
 	end
 	percentage = tonumber(percentage)
 
@@ -735,7 +744,9 @@ function run_automator()
 		if data.status == STATUS.AWAY then
 			
 			lights_random()
-			blinds_temperature()
+			blinds_temperature("south")
+			blinds_temperature("livingroom")
+			
 			windows_temperature()
 			
 		elseif data.status ==STATUS.VACATION then
@@ -745,7 +756,8 @@ function run_automator()
 		elseif data.status == STATUS.HOME then
 		
 			thermostats_auto()
-			blinds_temperature() -- ???
+			blinds_temperature("south")
+			blinds_temperature("livingroom")
 			windows_temperature()
 			
 		end
@@ -808,35 +820,36 @@ function daynight_status()
 	end
 end
 
-function blinds_temperature()
+function blinds_temperature(location)
 	local data 					= read_config()
 	if data.lock_blinds == 1 then
 		luup.log("[MyHome] Blinds locked")
 		return
 	end
 	
+	local blinds_auto_key		= "BlindStatusAuto"..location
 	local temperature_inside 	= temperature_inside()
 	local weather_status 		= weather_status()
-	local blinds_auto 			= read_or_init(SID_SELF,"BlindStatusAuto",SELF, 0)
+	local blinds_auto 			= read_or_init(SID_SELF,blinds_auto_key,SELF, 0)
 	local action 				= "keep"
-	local devices_blinds		= devices_search({ ["class"] = "Blinds", ["location"] = "south" })
+	local devices_blinds		= devices_search({ ["class"] = "Blinds", ["location"] = location })
 	
 	blinds_auto 				= tonumber(blinds_auto)
 	
 	local time = os.date('*t')
-	if (time.hour < BLINDS_TIME_START or time.hour > BLINDS_TIME_END) then
+	if (time.hour < BLINDS.LOCATION[location].START or time.hour > BLINDS.LOCATION[location].END) then
 		if blinds_auto == 1 then
-			luup.log("[MyHome] Opening blinds (time)")
+			luup.log("[MyHome] Opening ".. location.." blinds (time)")
 			action = "open"
 		end
-	elseif (temperature_inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR" and weather_status.temperature >= TEMPERATURE.BLIND_OUTSIDE) then
+	elseif (temperature_inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR" and weather_status.temperature >= BLIND.TEMPERATURE_OUTSIDE) then
 		if blinds_auto == 0 then
-			luup.log("[MyHome] Closing blinds (time & temperature)")
+			luup.log("[MyHome] Closing ".. location.." blinds (time & temperature)")
 			action = "close"
 		end
 	elseif (temperature_inside < (TEMPERATURE.MAX-1) or weather_status.condition ~= "FAIR") then
 		if blinds_auto == 1 then
-			luup.log("[MyHome] Opening blinds (temperature)")
+			luup.log("[MyHome] Opening ".. location.." blinds (temperature)")
 			action = "open"
 		end
 	end
@@ -845,12 +858,12 @@ function blinds_temperature()
 		for index,device in pairs(devices_blinds) do
 			blind_open(device)
 		end
-		luup.variable_set(SID_SELF,"BlindStatusAuto",0,SELF)
+		luup.variable_set(SID_SELF,blinds_auto_key,0,SELF)
 	elseif action == "close" then
 		for index,device in pairs(devices_blinds) do
 			blind_partial(device)
 		end
-		luup.variable_set(SID_SELF,"BlindStatusAuto",1,SELF)
+		luup.variable_set(SID_SELF,blinds_auto_key,1,SELF)
 	end
 end
 
