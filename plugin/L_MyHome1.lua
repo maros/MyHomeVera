@@ -780,16 +780,6 @@ function run_automator()
 			set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
 		end
 	end
-	for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
-		if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
-			set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
-		end
-	end
-	--for index,device in pairs(devices_search({ ["class"] = "Windows" })) do
-	--	if luup.variable_get(SID_DIMMING,"LoadLevelStatus",device) == 0 then
-	--		set_if_changed(SID_SELF, "DeviceStatus" .. device, 0, SELF)
-	--	end
-	--end
 	
 	if data.lock_all == 0 then
 		luup.log("[MyHome] Run automator actions")
@@ -890,7 +880,7 @@ function blinds_temperature(location)
 	blinds_auto					= tonumber(blinds_auto)
 	
 	local time = os.date('*t')
-	if (time.hour < BLINDS.LOCATION[location].START or time.hour > BLINDS.LOCATION[location].END) then
+	if (time.hour < BLINDS.LOCATION[location].START or time.hour > BLINDS.LOCATION[location].END or daynight_status() == "night") then
 		if blinds_auto == 1 then
 			luup.log("[MyHome] Opening ".. location.." blinds (time)")
 			action = "open"
