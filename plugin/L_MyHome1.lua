@@ -305,10 +305,7 @@ function set_status_away(lul_device)
 		-- Set thermostats to low setting
 		thermostats_set(TEMPERATURE.LOW)
 		
-		-- Turn all lights off
-		lights_set(0)
-		
-		start_timer(TIMER.AWAY,'run_away')
+		run_leaving()
 	end
 end
 
@@ -323,11 +320,24 @@ function set_status_vacation(lul_device)
 		-- Close all windows
 		windows_close()
 		
-		-- Turn all lights off
-		lights_set(0)
-
-		start_timer(TIMER.AWAY,'run_away')
+		run_leaving()
 	end
+end
+
+function run_leaving()
+	-- Turn all lights off
+	lights_set(0)
+	
+	for index,device in pairs(devices_search({ ["class"] = "SecSensor", ["immediate"] = true })) do
+		local tripped = luup.variable_get(SID_SELF, "Tripped", device)
+		tripped = tonumber(tripped)
+		if tripped == 1 then
+			remote_call('message',{ message = "Attention! Device " .. luup.devices[device].name .. " is tripped!" })	
+			
+		end
+	end
+	
+	start_timer(TIMER.AWAY,'run_away')
 end
 
 -- Intrusion detected
