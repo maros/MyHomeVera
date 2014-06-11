@@ -345,7 +345,7 @@ function run_intrusion(lul_device,message)
 	luup.log("[MyHome] Intrusion was detected")
 	luup.variable_set(SID_SELF, "AlarmMessage", message, SELF)
 	start_timer(TIMER.INTRUSION,"run_alarm")
-	remote_call('intrusion',{ message = message, timer = TIMER.INTRUSION })	
+	remote_call('intrusion',{ message = "Alarm! " .. message, timer = TIMER.INTRUSION })	
 end
 
 -- Run delayed alarm
@@ -435,7 +435,7 @@ function watch_alarm_callback(lul_device, lul_service, lul_variable, lul_value_o
 					if device_attr(device,"immediate") == true then
 						run_alarm(SELF, lul_settings)
 						-- Call alarm
-						remote_call("run",{ message = message })
+						remote_call("run",{ message = "Alarm!" .. message })
 						return
 					else
 						alarm_message = alarm_message .. message .. ","
