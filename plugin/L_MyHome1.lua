@@ -922,13 +922,14 @@ function blinds_wakeup()
 end
 
 function lights_random()
-	local lights = devices_search({ ["device_type"] = DID_LIGHT })
 	local data = read_config()
 	
 	if data.lock_lights == 1 then
 		luup.log("[MyHome] Lights locked")
 		return
 	end
+	
+	local lights = devices_search({ ["device_type"] = DID_LIGHT })
 	
 	-- Get lights and return if some light is already running
 	for index,device in pairs(lights) do
@@ -1010,15 +1011,16 @@ function windows_open()
 	end
 end
 
-function thermostats_set()
-	-- TODO
+function thermostats_set(temperature)
+	-- TODO handle thermostats
 end
 
-function thermostats_auto(temperature)
-	-- TODO
+function thermostats_auto()
+	-- TODO handle thermostats
 end
 
 function remote_call(action,params)
+-- TODO notify alarm manager
 --	local http		= require("socket.http")
 --	local sha1		= require("sha1")
 --	http.TIMEOUT	= 10
