@@ -100,63 +100,75 @@ local DEVICES					= {
 	[21]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[22]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[23]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[24]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[28]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "upper",
 		["timer"]						= TIMER.BLINDS
 	},
 	[29]							= {
 		["class"]						= "Blinds",
 		["location"]					= "south",
+		["position"]					= "upper",
 		["timer"]						= TIMER.BLINDS
 	},
 	[32]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[33]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "upper",
 		["wakeup"]						= true,
 		["timer"]						= TIMER.BLINDS
 	},
 	[26]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[30]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "upper",
 		["related"]						= 81,
 		["timer"]						= TIMER.BLINDS
 	},
 	[25]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "lower",
 		["timer"]						= TIMER.BLINDS
 	},
 	[31]							= {
 		["class"]						= "Blinds",
 		["location"]					= "north",
+		["position"]					= "upper",
 		["timer"]						= TIMER.BLINDS
 	},
 	[73]							= {
@@ -329,13 +341,21 @@ end
 -- Run delayed alarm
 function run_alarm(lul_device)
 	luup.log("[MyHome] ALARM!!!")
+	
 	-- TODO: Run sirens
 	
 	-- Turn all lights on
 	lights_set(1)
 	
-	-- Open all blinds
-	blinds_open()
+	-- Closing all lower blinds 
+	for index,device in pairs(devices_search({ ["class"] = "Blinds", ["position"] = "lower" })) do
+		device_move(device,0)
+	end
+	
+	-- Open all upper blinds 
+	for index,device in pairs(devices_search({ ["class"] = "Blinds", ["position"] = "upper" })) do
+		device_move(device,100)
+	end
 	
 	-- Close all windows
 	windows_close()
