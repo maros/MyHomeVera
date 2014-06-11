@@ -564,15 +564,12 @@ local function devices_search(search)
 		
 		for search_key, search_value in pairs(search) do
 			if match == true then
-				if (search_key == "class" or search_key == "location") then
-					local device_attr = DEVICES[device_id]
-					if device_attr == nil then
+				local device_attr = DEVICES[device_id]
+				
+				if device_attr[search_key] =~ nil then
+					local compare_value = device_attr[search_key]
+					if compare_value ~= search_value then
 						match = false
-					else
-						local compare_value = device_attr[search_key]
-						if compare_value == nil or compare_value ~= search_value then
-							match = false
-						end
 					end
 				else
 					local compare_value = device_data[search_key]
@@ -928,10 +925,8 @@ function blinds_wakeup()
 	
 	if data.status == 0 and data.lock_blinds == 0 then
 		luup.log("[MyHome] Opening blinds (wakeup)")
-		for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
-			if device_attr(device,"wakeup") == true then
-				device_open(device)
-			end
+		for index,device in pairs(devices_search({ ["class"] = "Blinds", ["wakeup"] = true })) do
+			device_open(device)
 		end
 	end
 end
