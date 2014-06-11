@@ -72,28 +72,6 @@ local DEVICES					= {
 	[20]							= {
 		["class"]						= "SecSensor"
 	},
-	[35]							= {
-		["class"]						= "SecSensor",
-		["immediate"]					= true
-	},
-	[63]							= {
-		["class"]						= "SecSensor",
-		["trigger"]						= 57
-	},
-	[64]							= {
-		["class"]						= "TempSensor",
-		["location"]					= "inside"
-	},	
-	[68]							= {
-		["class"]						= "TempSensor",
-		["location"]					= "outside"
-	},
-	[65]							= {
-		["class"]						= "LightSensor",
-	},
-	[67]							= {
-		["class"]						= "Weather"
-	},
 	[21]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
@@ -122,6 +100,20 @@ local DEVICES					= {
 		["timer"]						= TIMER.BLINDS,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
+	[25]							= {
+		["class"]						= "Blinds",
+		--["location"]					= "north",
+		["position"]					= "lower",
+		["timer"]						= TIMER.BLINDS,
+		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	},
+	[26]							= {
+		["class"]						= "Blinds",
+		--["location"]					= "north",
+		["position"]					= "lower",
+		["timer"]						= TIMER.BLINDS,
+		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	},
 	[28]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
@@ -136,6 +128,21 @@ local DEVICES					= {
 		["timer"]						= TIMER.BLINDS,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
+	[30]							= {
+		["class"]						= "Blinds",
+		--["location"]					= "north",
+		["position"]					= "upper",
+		["related"]						= 81,
+		["timer"]						= TIMER.BLINDS,
+		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	},
+	[31]							= {
+		["class"]						= "Blinds",
+		--["location"]					= "north",
+		["position"]					= "upper",
+		["timer"]						= TIMER.BLINDS,
+		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	},
 	[32]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
@@ -149,34 +156,27 @@ local DEVICES					= {
 		["wakeup"]						= true,
 		["timer"]						= TIMER.BLINDS
 	},
-	[26]							= {
-		["class"]						= "Blinds",
-		--["location"]					= "north",
-		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
-		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	[35]							= {
+		["class"]						= "SecSensor",
+		["immediate"]					= true
 	},
-	[30]							= {
-		["class"]						= "Blinds",
-		--["location"]					= "north",
-		["position"]					= "upper",
-		["related"]						= 81,
-		["timer"]						= TIMER.BLINDS,
-		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	[63]							= {
+		["class"]						= "SecSensor",
+		["trigger"]						= 57
 	},
-	[25]							= {
-		["class"]						= "Blinds",
-		--["location"]					= "north",
-		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
-		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	[64]							= {
+		["class"]						= "TempSensor",
+		["location"]					= "inside"
+	},	
+	[65]							= {
+		["class"]						= "LightSensor",
 	},
-	[31]							= {
-		["class"]						= "Blinds",
-		--["location"]					= "north",
-		["position"]					= "upper",
-		["timer"]						= TIMER.BLINDS,
-		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
+	[67]							= {
+		["class"]						= "Weather"
+	},
+	[68]							= {
+		["class"]						= "TempSensor",
+		["location"]					= "outside"
 	},
 	[73]							= {
 		["class"]						= "Presence"
@@ -190,13 +190,6 @@ local DEVICES					= {
 	[76]							= {
 		["class"]						= "LockAll"
 	},
-	[83]							= {
-		["class"]						= "RainSensor"
-	},
---	[84]							= {
---		["class"]						= "SecSensor",
---		["immediate"]					= true
---	},
 	[80]							= {
 		["class"]						= "LockLights"
 	},
@@ -204,9 +197,13 @@ local DEVICES					= {
 		["class"]						= "Window",
 		["related"]						= 30,
 		["timer"]						= TIMER.WINDOWS
---	},
---	[82]							= {
---		["class"]						= "Window",
+	},
+	[83]							= {
+		["class"]						= "RainSensor"
+	},
+	[84]							= {
+		["class"]						= "SecSensor",
+		["immediate"]					= true
 	}
 }
 
