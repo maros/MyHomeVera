@@ -37,7 +37,7 @@ STATUS.INTRUSION				= 90
 STATUS.ALARM					= 100
 
 local TIMER						= {}
-TIMER.WINDOWS					= 30
+TIMER.WINDOWS					= 45
 TIMER.BLINDS					= 17	-- timer for blinds to move fully up/down
 TIMER.AWAY						= 300	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
