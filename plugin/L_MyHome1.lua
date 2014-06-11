@@ -821,16 +821,11 @@ function run_automator()
 	luup.call_delay("run_automator", 180, "")
 end
 
-function temperature_inside()
-	local device_temperature = device_search_single({ ["class"] = "TempSensor", ["location"] = "inside" })
-	local temperature_inside = luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",device_temperature)
-	return tonumber(temperature_inside)
-end
-
 function weather_status()
 	local device_weather		= device_search_single({ ["class"] = "Weather" })
 	local device_temperature	= device_search_single({ ["class"] = "TempSensor", ["location"] = "outside" })
-	local device_rain			= device_search_single({ ["class"] = "RainSensor" })
+	local device_inside			= device_search_single({ ["class"] = "RainSensor" })
+	local device_temperature = device_search_single({ ["class"] = "TempSensor", ["location"] = "inside" })
 	
 	local weather = {}
 	weather.condition	= "POOR"
@@ -840,6 +835,8 @@ function weather_status()
 	weather.wind_speed	= luup.variable_get(SID_WEATHER,"WindSpeed",device_weather)
 	weather.wind_speed	= tonumber(weather.wind_speed)
 	weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",device_rain)
+	weather.inside		= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",device_inside)
+	weather.inside		= tonumber(weather.inside)
 	
 	local condition = luup.variable_get(SID_WEATHER,"ConditionGroup",device_weather)
 	
@@ -849,7 +846,7 @@ function weather_status()
 		end
 	end
 	
-	-- TODO
+	-- TODO handle rain sensor
 	if weather.condition == "POOR" or weather.rain_sensor == true then
 		weather.rain = true
 	end
@@ -881,7 +878,6 @@ function blinds_temperature(location)
 		return
 	end
 	
-	local temperature_inside	= temperature_inside()
 	local weather_status		= weather_status()
 	local blinds_auto_key		= "BlindStatusAuto"..location
 	local action				= "keep"
@@ -895,12 +891,12 @@ function blinds_temperature(location)
 			luup.log("[MyHome] Opening ".. location.." blinds (time)")
 			action = "open"
 		end
-	elseif (temperature_inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR" and weather_status.temperature >= BLIND.TEMPERATURE_OUTSIDE) then
+	elseif (weather_status.inside >= TEMPERATURE.MAX and weather_status.condition == "FAIR" and weather_status.temperature >= BLIND.TEMPERATURE_OUTSIDE) then
 		if blinds_auto == 0 then
 			luup.log("[MyHome] Closing ".. location.." blinds (time & temperature)")
 			action = "close"
 		end
-	elseif (temperature_inside < (TEMPERATURE.MAX-1) or weather_status.condition ~= "FAIR") then
+	elseif (weather_status.inside < (TEMPERATURE.MAX-1) or weather_status.condition ~= "FAIR") then
 		if blinds_auto == 1 then
 			luup.log("[MyHome] Opening ".. location.." blinds (temperature)")
 			action = "open"
@@ -982,7 +978,6 @@ end
 function windows_temperature()
 	local data					= read_config()
 	local weather_status		= weather_status()
-	local temperature_inside	= temperature_inside()
 	local windows_auto			= read_or_init(SID_SELF,"WindowsStatusAuto",SELF, 0)
 	local action				= "keep"
 	
@@ -991,10 +986,10 @@ function windows_temperature()
 		action = "close"
 	elseif data.lock_windows == 0 then
 		-- check temperature and wind
-		if (temperature_inside >= TEMPERATURE.MAX and temperature_inside > (weather_status.temperature - 1) and windows_auto == 0) then
+		if (weather_status.inside >= TEMPERATURE.MAX and weather_status.inside > (weather_status.temperature - 1) and windows_auto == 0) then
 			luup.log("[MyHome] Opening all windows (temperature)")
 			action = "open"
-		elseif (windows_auto == 1 and temperature_inside < (TEMPERATURE.MAX-1)) then
+		elseif (windows_auto == 1 and weather_status.inside < (TEMPERATURE.MAX-1)) then
 			luup.log("[MyHome] Closing all windows (temperature)")
 			action = "close"
 		end
