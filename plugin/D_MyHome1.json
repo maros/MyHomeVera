@@ -262,7 +262,7 @@
          }
       }
    },
-   "flashicon" : "http://empuk.host-ed.me/vera_img/lock.png", // TODO
+   "flashicon" : "http://empuk.host-ed.me/vera_img/lock.png",
    "state_icons" : [
       "lock_0.png",
       "lock_10.png",
