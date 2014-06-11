@@ -1,0 +1,47 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use 5.016;
+
+use FindBin qw($Bin);
+use JSON::XS qw(decode_json);
+use XML::LibXML;
+use Path::Class;
+
+my $dir = Path::Class::Dir->new($Bin,"../plugin");
+foreach my $element ($dir->children) {
+    
+    say "Checking ".$element->basename;
+    if ($element->basename =~ m/\.json$/) {
+        my $json = eval {
+            decode_json($element->slurp);
+        };
+        if ($@ || ref($json) ne 'HASH') {
+            say "-> Failed: $@";
+        } else {
+            say "-> OK";
+        }
+    } elsif ($element->basename =~ m/\.lua/) {
+        my $output = `lua $element 2>\&1`;
+        chomp($output);
+        if ($output) {
+            say "-> Failed: $output";
+        } else {
+            say "-> OK";
+        }
+    } elsif ($element->basename =~ m/\.xml/) {
+        my $dom = eval { 
+            XML::LibXML->load_xml( location => $element->stringify );
+        };
+        if ($@ || ref($dom) ne 'XML::LibXML::Document') {
+            say "-> Failed: $@";
+        } else {
+            say "-> OK";
+        }
+    } else {
+        say "-> OK: Don't know how to check";
+    }
+    
+}
+
