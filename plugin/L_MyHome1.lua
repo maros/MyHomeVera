@@ -712,19 +712,19 @@ end
 
 function device_open(device) 
 	device = tonumber(device)
-	device_move(100)
+	device_move(device,100)
 end
 
 function device_close(device)
 	device = tonumber(device)
-	device_move(0)
+	device_move(device,0)
 end
 
 function device_move(device,percentage)
 	device		= tonumber(device)
 	percentage	= tonumber(percentage)
 	
-	-- Check related device
+	-- TODO Check related device
 	local related = device_attr(device,"related")
 	-- window 0-50 - blind 0-100
 	-- window 50-100 - blind max 50-100
