@@ -231,13 +231,13 @@ function initialize(lul_device)
 	luup.log("[MyHome] Fixup device status")
 	if data.status == 0 then
 		if data.presence == 0 then
-			luup.log("[MyHome] Detected presence mismatch")
+			luup.log("[MyHome] Detected presence mismatch (set to home)")
 			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 1 }, data.device_presence)
 			luup.call_action(SID_VSWITCH, "SetTarget", { newTargetValue = 1 }, data.device_presence)
 		end
 	else
 		if data.presence == 1 then
-			luup.log("[MyHome] Detected presence mismatch")
+			luup.log("[MyHome] Detected presence mismatch (set to away)")
 			luup.call_action(SID_SWITCHPOWER, "SetTarget", { newTargetValue = 0 }, data.device_presence)
 			luup.call_action(SID_VSWITCH, "SetTarget", { newTargetValue = 0 }, data.device_presence)
 		end
@@ -941,6 +941,7 @@ function lights_random()
 	local data = read_config()
 	
 	if data.lock_lights == 1 then
+		luup.log("[MyHome] Lights locked")
 		return
 	end
 	
@@ -954,7 +955,7 @@ function lights_random()
 	
 	local time = os.date('*t')
 	if (daynight_status() == "night" and time.hour >= 18 and time.hour <= 22) then
-
+	
 		local device		= lights[math.random( #lights )]
 		local device_on		= math.floor(math.random(5))
 		local device_time	= math.floor(math.random(60,719))
@@ -990,12 +991,15 @@ function windows_temperature()
 	local action				= "keep"
 	
 	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WIND_SPEED_LIMIT then
+		luup.log("[MyHome] Closing all windows (weather)")
 		action = "close"
 	elseif data.lock_windows == 0 then
 		-- check temperature and wind
 		if (temperature_inside >= TEMPERATURE.MAX and temperature_inside > (weather_status.temperature - 1) and windows_auto == 0) then
+			luup.log("[MyHome] Opening all windows (temperature)")
 			action = "open"
 		elseif (windows_auto == 1 and temperature_inside < (TEMPERATURE.MAX-1)) then
+			luup.log("[MyHome] Closing all windows (temperature)")
 			action = "close"
 		end
 	end
@@ -1010,16 +1014,12 @@ function windows_temperature()
 end
 
 function windows_close()
-	luup.log("[MyHome] Closing all windows")
-
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
 		device_close(device)
 	end
 end
 
 function windows_open()
-	luup.log("[MyHome] Opening all windows")
-	
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
 		device_open(device)
 	end
