@@ -746,19 +746,20 @@ function device_close(device)
 end
 
 function device_move(device,percentage)
-	device		= tonumber(device)
-	percentage	= tonumber(percentage)
+	device			= tonumber(device)
+	percentage		= tonumber(percentage)
+	local related	= device_attr(device,"related")
 	
-	-- TODO Check related device
-	local related = device_attr(device,"related")
-	-- window 0-50 - blind 0-100
-	-- window 50-100 - blind max 50-100
-	--if related != nil then 
-	--	local related_position = device_position_get(related)
-	--	if related_position > 50 and percentage < 60 then
-	--		percentage = 60
-	--	end
-	--end
+	-- Check related devices
+	if related ~= nil then
+		local class				= device_attr(device,"class")
+		local related_position	= device_position_get(related)
+		if class == "Blinds" and related_position > 70 and percentage < 60 then
+			percentage = 60
+		elseif class == "Windows" and percentage > 70 and related_position < 60 then
+			percentage = 70
+		end
+	end
 
 	luup.log("[MyHome] Moving device " .. device .. " to " .. percentage .. "%")
 	
