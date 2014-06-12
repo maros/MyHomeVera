@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use 5.016;
+
+use FindBin qw($Bin);
+use Path::Class;
+use LWP::Simple;
+
+my $vera = '192.168.0.20';
+my $dir = Path::Class::Dir->new($Bin,"../lib");
+my %libs = (
+    sunpos  => 'http://code.mios.com/svn_public/mios_genericutils/sunpos.lua',
+    sha1    => 'http://regex.info/code/sha1.lua',
+);
+
+foreach my $key (keys %libs) {
+    say "Fetching ".$libs{$key};
+    my $content = get($libs{$key});
+    if ($content) {
+        my $file = $dir->file($key.'.lua');
+        $file->spew($content);
+        say "-> OK";
+        say `scp $file root\@${vera}:/usr/lib/lua`;
+    } else {
+        say "-> Fail";
+    }
+}
