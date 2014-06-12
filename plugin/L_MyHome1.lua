@@ -859,6 +859,7 @@ function weather_status()
 	weather.wind_speed	= luup.variable_get(SID_WEATHER,"WindSpeed",device_weather)
 	weather.wind_speed	= tonumber(weather.wind_speed)
 	weather.rain_sensor = luup.variable_get(SID_SECURITYSENSOR,"Tripped",device_rain)
+	weather.rain_sensor	= tonumber(weather.rain_sensor)
 	weather.inside		= luup.variable_get(SID_TEMPERATURE,"CurrentTemperature",device_inside)
 	weather.inside		= tonumber(weather.inside)
 	
@@ -870,8 +871,7 @@ function weather_status()
 		end
 	end
 	
-	-- TODO handle rain sensor
-	if weather.condition == "POOR" or weather.rain_sensor == true then
+	if weather.condition == "POOR" or weather.rain_sensor == 1 then
 		weather.rain = true
 	end
 	
