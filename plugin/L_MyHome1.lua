@@ -64,7 +64,7 @@ WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny", "partlyc
 
 local ALARM_SECRET				= 'TODO CHANGE'
 local ALARM_SERVER				= 'http:://alarm.k-1.com'
-local WIND_SPEED_LIMIT			= 5
+local WIND_SPEED_LIMIT			= 15
 local LUMINOSITY_LEVEL			= 4
 local SUNOFFSET					= 45 * 60
 
