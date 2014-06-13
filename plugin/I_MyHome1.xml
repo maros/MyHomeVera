@@ -26,7 +26,7 @@
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
       <name>device_move</name>
-      <run>return device_partial(lul_settings.device,lul_settings.percentage)</run>
+      <run>return device_move(lul_settings.device,lul_settings.percentage)</run>
     </action>
     <action>
       <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>

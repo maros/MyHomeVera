@@ -498,7 +498,7 @@ end
 -- HELPER
 --
 
-local function read_config()
+function read_config()
 
 	local data = {}
 	data.status				= read_or_init(SID_SELF, "Status", SELF, 0)
@@ -537,7 +537,7 @@ local function read_config()
 	return data
 end
 
-local function read_or_init(service_id, name, device, default)
+function read_or_init(service_id, name, device, default)
 	local value = luup.variable_get(service_id,name, device)
 	if (value == nil or value == "") then
 		value = default
@@ -546,7 +546,7 @@ local function read_or_init(service_id, name, device, default)
 	return value
 end
 
-local function set_if_changed(service_id, name, value, device)
+function set_if_changed(service_id, name, value, device)
 	local curValue = luup.variable_get(service_id, name, device)
 	if ((value ~= curValue) or (curValue == nil)) then
 		luup.variable_set(service_id, name, value, device)
@@ -556,7 +556,7 @@ local function set_if_changed(service_id, name, value, device)
 	end
 end
 
-local function device_attr(device,attr)
+function device_attr(device,attr)
 	if DEVICES[device] == nil then
 		return
 	else
@@ -564,7 +564,7 @@ local function device_attr(device,attr)
 	end
 end
 
-local function device_search_single(search)
+function device_search_single(search)
 	local result = devices_search(search)
 	if table.getn(result) > 0 then
 		return result[1]
@@ -572,7 +572,7 @@ local function device_search_single(search)
 	return
 end
 
-local function devices_search(search)
+function devices_search(search)
 	devices = {}
 	
 	for device_id, device_data in pairs(luup.devices) do
@@ -613,7 +613,7 @@ end
 -- Various actors functions
 --
 
-local function tick()
+function tick()
 	-- Timer may have been cancelled or forced.
 	-- If so, break out.
 	local counting = read_or_init(SID_SELF,"Counting",SELF, 0)
@@ -642,7 +642,7 @@ local function tick()
 	return true
 end
 
-local function start_timer(duration,action)
+function start_timer(duration,action)
 	local counting = read_or_init(SID_SELF,"Counting",SELF, 0)
 	if (counting == "1") then
 		return false
@@ -651,7 +651,7 @@ local function start_timer(duration,action)
 	return start_timer_always(action)
 end
 
-local function start_timer_always(action)
+function start_timer_always(action)
 	set_if_changed(SID_SELF, "TimerAction", action, SELF)
 	
 	local counting = read_or_init(SID_SELF,"Counting",SELF, 0)
@@ -671,7 +671,7 @@ function update_remaining()
 	return remaining > 0
 end
 
-local function cancel_timer()
+function cancel_timer()
 	local counting = read_or_init(SID_SELF,"Counting",SELF, 0)
 	if (counting == "0") then
 		return false
@@ -819,7 +819,7 @@ function run_automator()
 	
 	if data.lock_all == 0 then
 		luup.log("[MyHome] Run automator actions")
-	
+		
 		if data.status == STATUS.AWAY then
 			
 			lights_random()
