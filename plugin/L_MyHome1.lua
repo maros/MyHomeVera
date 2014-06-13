@@ -576,28 +576,29 @@ function devices_search(search)
 	devices = {}
 	
 	for device_id, device_data in pairs(luup.devices) do
-		local match = true
-		
-		for search_key, search_value in pairs(search) do
-			if match == true then
-				local device_attr = DEVICES[device_id]
-				
-				if device_attr[search_key] ~= nil then
-					local compare_value = device_attr[search_key]
-					if compare_value ~= search_value then
-						match = false
-					end
-				else
-					local compare_value = device_data[search_key]
-					if compare_value == nil or compare_value ~= search_value then
-						match = false
+		if DEVICES[device_id] ~= nil then
+			local match = true
+			for search_key, search_value in pairs(search) do
+				if match == true then
+					local device_attr = DEVICES[device_id]
+					
+					if device_attr[search_key] ~= nil then
+						local compare_value = device_attr[search_key]
+						if compare_value ~= search_value then
+							match = false
+						end
+					else
+						local compare_value = device_data[search_key]
+						if compare_value == nil or compare_value ~= search_value then
+							match = false
+						end
 					end
 				end
 			end
-		end
-		if match == true then
-			--luup.log("[MyHome] Found Device " .. device_data.device_type .. " - "..device_id)
-			table.insert(devices,tonumber(device_id))
+			if match == true then
+				--luup.log("[MyHome] Found Device " .. device_data.device_type .. " - "..device_id)
+				table.insert(devices,tonumber(device_id))
+			end
 		end
 	end
 	
@@ -827,12 +828,12 @@ function run_automator()
 			
 			windows_temperature()
 			
-		elseif data.status ==STATUS.VACATION then
-		
+		elseif data.status == STATUS.VACATION then
+			
 			lights_random()
 			
 		elseif data.status == STATUS.HOME then
-		
+			
 			thermostats_auto()
 			blinds_temperature()
 			windows_temperature()
