@@ -33,5 +33,15 @@
       <name>blinds_wakeup</name>
       <run>return blinds_wakeup()</run>
     </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>blinds_open</name>
+      <run>return blinds_open()</run>
+    </action>
+    <action>
+      <serviceId>urn:upnp-k1-com:serviceId:MyHome1</serviceId>
+      <name>windows_close</name>
+      <run>return windows_close()</run>
+    </action>
   </actionList>
 </implementation>

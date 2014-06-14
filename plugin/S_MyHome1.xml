@@ -50,15 +50,6 @@
       </argumentList>
     </action>
     <action>
-      <name>lights_set</name>
-      <argumentList>
-        <argument>
-          <name>target</name>
-          <direction>in</direction>
-        </argument>
-      </argumentList>
-    </action>
-    <action>
       <name>device_move</name>
       <argumentList>        
         <argument>
@@ -69,6 +60,21 @@
           <name>percentage</name>
           <direction>in</direction>
         </argument>
+      </argumentList>
+    </action>
+    <action>
+      <name>windows_close</name>
+      <argumentList>
+      </argumentList>
+    </action>
+    <action>
+      <name>blinds_open</name>
+      <argumentList>
+      </argumentList>
+    </action>
+    <action>
+      <name>blinds_wakeup</name>
+      <argumentList>
       </argumentList>
     </action>
   </actionList>
