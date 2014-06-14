@@ -1007,7 +1007,8 @@ end
 function windows_temperature()
 	local data					= read_config()
 	local weather_status		= weather_status()
-	local windows_auto			= read_or_init(SID_SELF,"WindowsStatusAuto",SELF, 0)
+	local status_key			= "WindowsStatusAuto"
+	local windows_auto			= read_or_init(SID_SELF,status_key,SELF, 0)
 	local action				= "keep"
 	windows_auto				= tonumber(windows_auto)
 	
