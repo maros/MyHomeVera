@@ -1071,7 +1071,7 @@ function remote_call(action,params)
 --	local http		= require("socket.http")
 --	local sha1		= require("sha1")
 --	http.TIMEOUT	= 10
---	--message			= urlencode(message)
+--	message			= url_encode(message)
 --	
 --	-- TODO handle params
 --	local url		= "https://" .. ALARM_SERVER .. "/alarm/" .. action .. "?message=" .. message .. "&time=" .. os.time()
@@ -1092,3 +1092,12 @@ function remote_call(action,params)
 --	end
 end
 
+function url_encode(str)
+	if (str) then
+	str = string.gsub (str, "\n", "\r\n")
+	str = string.gsub (str, "([^%w %-%_%.%~])",
+		function (c) return string.format ("%%%02X", string.byte(c)) end)
+		str = string.gsub (str, " ", "+")
+	end
+	return str	
+end
