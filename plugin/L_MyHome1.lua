@@ -576,34 +576,34 @@ function devices_search(search)
 	devices = {}
 	
 	for device_id, device_data in pairs(luup.devices) do
-		if DEVICES[device_id] ~= nil then
-			local match = true
-			for search_key, search_value in pairs(search) do
-				if match == true then
-					local device_attr = DEVICES[device_id]
-					
-					if device_attr[search_key] ~= nil then
-						local compare_value = device_attr[search_key]
-						if compare_value ~= search_value then
-							match = false
-						end
-					else
-						local compare_value = device_data[search_key]
-						if compare_value == nil or compare_value ~= search_value then
-							match = false
-						end
+		local match = true
+		for search_key, search_value in pairs(search) do
+			if match == true then
+				if device_data[search_key] ~= nil then
+					local compare_value = device_data[search_key]
+					if compare_value ~= search_value then
+						match = false
 					end
+				elseif DEVICES[device_id] ~= nil and DEVICES[device_id][search_key] ~= nil then
+					local compare_value = DEVICES[device_id][search_key]
+					if compare_value ~= search_value then
+						match = false
+					end
+				else
+					match = false
 				end
 			end
-			if match == true then
-				--luup.log("[MyHome] Found Device " .. device_data.device_type .. " - "..device_id)
-				table.insert(devices,tonumber(device_id))
-			end
+		end
+		if match == true then
+			table.insert(devices,tonumber(device_id))
 		end
 	end
 	
 	if table.getn(devices) == 0 then
-		luup.log("[MyHome] Could not find any devices")
+		luup.log("[MyHome] Could not find any devices",1)
+		for search_key, search_value in pairs(search) do
+			luup.log("[MyHome] Search for "..search_key.."="..search_value)
+		end
 	end
 	
 	return devices
