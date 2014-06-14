@@ -37,19 +37,22 @@ STATUS.INTRUSION				= 90
 STATUS.ALARM					= 100
 
 local TIMER						= {}
-TIMER.WINDOWS					= 45
-TIMER.BLINDS					= 17	-- timer for blinds to move fully up/down
 TIMER.AWAY						= 300	-- timer for alarm to be armed after leaving
 TIMER.INTRUSION					= 60	-- timer for alarm to be disarmed after coming
 TIMER.ALARM						= 600	-- timer for alarm
 
 local BLINDS					= {}
+BLINDS.TIMER					= 17	-- timer for blinds to move fully up/down
 BLINDS.PARTIAL					= 20
 BLINDS.TEMPERATURE_OUTSIDE		= 22
 BLINDS.START_SOUTH				= 10
 BLINDS.END_SOUTH				= 15
 BLINDS.START_NORTH				= 18
 BLINDS.END_NORTH				= 20
+
+local WINDOWS					= {}
+WINDOWS.TIMER					= 45
+WINDOWS.WIND_SPEED_LIMIT		= 20
 
 local TEMPERATURE				= {}
 TEMPERATURE.MAX					= 25
@@ -64,7 +67,6 @@ WEATHER.FAIR					= Set { "clear", "hazy", "mostlysunny", "partlysunny", "partlyc
 
 local ALARM_SECRET				= 'TODO CHANGE'
 local ALARM_SERVER				= 'http:://alarm.k-1.com'
-local WIND_SPEED_LIMIT			= 15
 local LUMINOSITY_LEVEL			= 4
 local SUNOFFSET					= 45 * 60
 
@@ -76,56 +78,56 @@ local DEVICES					= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[22]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[23]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[24]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[25]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
 	},
 	[26]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
 	},
 	[28]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "upper",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[29]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "south",
 		["position"]					= "upper",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_SOUTH, to = BLINDS.END_SOUTH }
 	},
 	[30]							= {
@@ -133,28 +135,28 @@ local DEVICES					= {
 		--["location"]					= "north",
 		["position"]					= "upper",
 		["related"]						= 81,
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
 	},
 	[31]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
 		["position"]					= "upper",
-		["timer"]						= TIMER.BLINDS,
+		["timer"]						= BLINDS.TIMER,
 		["shade"]						= { from = BLINDS.START_NORTH, to = BLINDS.END_NORTH }
 	},
 	[32]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
 		["position"]					= "lower",
-		["timer"]						= TIMER.BLINDS
+		["timer"]						= BLINDS.TIMER
 	},
 	[33]							= {
 		["class"]						= "Blinds",
 		--["location"]					= "north",
 		["position"]					= "upper",
 		["wakeup"]						= true,
-		["timer"]						= TIMER.BLINDS
+		["timer"]						= BLINDS.TIMER
 	},
 	[35]							= {
 		["class"]						= "SecSensor",
@@ -196,7 +198,7 @@ local DEVICES					= {
 	[81]							= {
 		["class"]						= "Window",
 		["related"]						= 30,
-		["timer"]						= TIMER.WINDOWS
+		["timer"]						= WINDOWS.TIMER
 	},
 	[83]							= {
 		["class"]						= "RainSensor"
@@ -256,7 +258,6 @@ function initialize(lul_device)
 		end
 	end
 	
-	-- luup.variable_watch("watch_presence", SID_SWITCHPOWER, nil, data.device_presence)
 	-- luup.variable_watch("watch_presence", SID_VSWITCH, nil, data.device_presence)
 	
 	-- Close windows on rain
@@ -265,23 +266,13 @@ function initialize(lul_device)
 	-- Re-start countdown
 	tick()
 	
+	-- Start automator
 	run_automator()
 	
 	luup.log("[MyHome] Finished Initialize")
 	
 	return true
 end
-
-function watch_presence(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
-	luup.log("[MyHome] Presence set via VSwitch")
-	if lul_value_old ~= lul_value_new then
-		if lul_value_new == 1 then
-			set_status_home(lul_device)
-		elseif lul_value_new == 0 then
-			set_status_away(lul_device)
-		end
-	end
-end	
 
 -- Manually set status = Home
 function set_status_home(lul_device)
@@ -309,6 +300,7 @@ function set_status_away(lul_device)
 		-- Set thermostats to low setting
 		thermostats_set(TEMPERATURE.LOW)
 		
+		-- Run common away code
 		run_leaving()
 	end
 end
@@ -324,6 +316,7 @@ function set_status_vacation(lul_device)
 		-- Close all windows
 		windows_close()
 		
+		-- Run common away code
 		run_leaving()
 	end
 end
@@ -332,12 +325,12 @@ function run_leaving()
 	-- Turn all lights off
 	lights_set(0)
 	
+	-- Alert on open immediate-devices
 	for index,device in pairs(devices_search({ ["class"] = "SecSensor", ["immediate"] = true })) do
 		local tripped = luup.variable_get(SID_SELF, "Tripped", device)
 		tripped = tonumber(tripped)
 		if tripped == 1 then
 			remote_call('message',{ message = "Attention! Device " .. luup.devices[device].name .. " is tripped!" })	
-			
 		end
 	end
 	
@@ -372,9 +365,6 @@ function run_alarm(lul_device)
 		device_move(device,100)
 		device_auto_set(device,0)
 	end
-	
-	-- Close all windows
-	windows_close()
 	
 	start_timer(TIMER.ALARM,"run_reset")
 end
@@ -493,6 +483,17 @@ function watch_light_callback(lul_device, lul_service, lul_variable, lul_value_o
 		device_off(triggered_device)
 	end
 end
+
+function watch_presence(lul_device, lul_service, lul_variable, lul_value_old, lul_value_new)
+	luup.log("[MyHome] Presence set via VSwitch")
+	if lul_value_old ~= lul_value_new then
+		if lul_value_new == 1 then
+			set_status_home(lul_device)
+		elseif lul_value_new == 0 then
+			set_status_away(lul_device)
+		end
+	end
+end	
 
 -- 
 -- HELPER
@@ -768,8 +769,8 @@ function device_move(device,percentage)
 		device_position_set(device,percentage)
 	else
 		local blind_position	= device_position_get(device)
-		local blind_time		= math.floor(( blind_position - percentage ) / 100 * TIMER.BLINDS)
-		--percentage			= math.floor(( 1 -( blind_time / TIMER.BLINDS)) * 100)
+		local blind_time		= math.floor(( blind_position - percentage ) / 100 * BLINDS.TIMER)
+		--percentage			= math.floor(( 1 -( blind_time / BLINDS.TIMER)) * 100)
 		
 		if blind_time ~= 0 and percentage ~= blind_position then
 			device_position_set(device,percentage)
@@ -1012,7 +1013,7 @@ function windows_temperature()
 	local action				= "keep"
 	windows_auto				= tonumber(windows_auto)
 	
-	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WIND_SPEED_LIMIT then
+	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WINDOWS.WIND_SPEED_LIMIT then
 		luup.log("[MyHome] Closing all windows (weather)")
 		action = "close"
 	elseif data.lock_windows == 1 then
@@ -1031,23 +1032,28 @@ function windows_temperature()
 	end
 	
 	if action == "close" then
-		luup.variable_set(SID_SELF,status_key,0,SELF)
 		windows_close()
 	elseif action == "open" then
 		luup.variable_set(SID_SELF,status_key,1,SELF)
-		windows_open()
+		for index,device in pairs(devices_search({ ["class"] = "Window" })) do
+			--device_auto_set(device,1)
+			device_open(device)
+		end
 	end
 end
 
 function windows_close()
+	luup.variable_set(SID_SELF,"WindowsStatusAuto",0,SELF)
 	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
+		--device_auto_set(device,0)
 		device_close(device)
 	end
 end
 
-function windows_open()
-	for index,device in pairs(devices_search({ ["class"] = "Window" })) do
-		device_open(device)
+function blinds_open()
+	for index,device in pairs(devices_search({ ["class"] = "Blinds" })) do
+		device_auto_set(device,0)
+		device_move(device,100)
 	end
 end
 
