@@ -53,6 +53,7 @@ BLINDS.END_NORTH				= 20
 local WINDOWS					= {}
 WINDOWS.TIMER					= 45
 WINDOWS.WIND_SPEED_LIMIT		= 20
+WINDOWS.MIN_TEMPERATURE_OUTSIDE = 14
 
 local TEMPERATURE				= {}
 TEMPERATURE.MAX					= 25
@@ -1013,7 +1014,7 @@ function windows_temperature()
 	local action				= "keep"
 	windows_auto				= tonumber(windows_auto)
 	
-	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WINDOWS.WIND_SPEED_LIMIT then
+	if weather_status.rain == true or data.status >= 20 or weather_status.wind_speed > WINDOWS.WIND_SPEED_LIMIT or weather_status.temperature < WINDOWS.MIN_TEMPERATURE_OUTSIDE then
 		luup.log("[MyHome] Closing all windows (weather)")
 		action = "close"
 	elseif data.lock_windows == 1 then
